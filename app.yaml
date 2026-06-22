@@ -1,0 +1,6 @@
+name: usv_controller
+description: 手持式無人水面載具（USV）遠端遙控器，基於 Arduino UNO Q 雙核心平台開發。
+ports: []
+bricks:
+- arduino:web_ui: {}
+icon: ⚓

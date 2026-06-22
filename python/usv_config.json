@@ -1,0 +1,6 @@
+{
+  "protocol": "udp",
+  "remote_ip": "192.168.50.99",
+  "remote_port": 14550,
+  "local_port": 14551
+}

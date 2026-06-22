@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>USV Remote Controller</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-left">
+      <span class="status-dot offline" id="ws-dot"></span>
+      <div>
+        <div class="app-title">USV REMOTE CONTROLLER</div>
+        <div class="app-subtitle">Surface Vehicle Web Console</div>
+      </div>
+      <span class="version-badge">v2.0</span>
+    </div>
+
+    <div class="header-right">
+      <span class="arm-badge disarmed" id="arm-badge">⚡ DISARMED</span>
+      <span class="mode-badge locked" id="mode-badge">LOCKED</span>
+      <span class="failsafe-badge hidden" id="failsafe-badge">FAILSAFE</span>
+      <div class="lq-wrap">
+        <span class="mini-label">LQ</span>
+        <div class="lq-track"><div id="lq-bar"></div></div>
+        <span id="lq-val">0</span>
+      </div>
+      <div class="ws-wrap">
+        <span class="mini-label">WS</span>
+        <span id="ws-label">未連線</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-grid">
+    <section class="panel left-panel">
+      <div class="section-title">Network Settings</div>
+      <div class="field-grid">
+        <div>
+          <label class="field-label" for="conn-proto">協定</label>
+          <select id="conn-proto" class="inp-field">
+            <option value="udp">UDP</option>
+            <option value="tcp">TCP</option>
+          </select>
+        </div>
+        <div>
+          <label class="field-label" for="conn-ip">USV IP</label>
+          <input id="conn-ip" class="inp-field" type="text" placeholder="192.168.1.100">
+        </div>
+        <div>
+          <label class="field-label" for="conn-local-port">本地監聽</label>
+          <input id="conn-local-port" class="inp-field" type="number" min="1" max="65535" placeholder="14551">
+        </div>
+        <div>
+          <label class="field-label" for="conn-port">USV Port</label>
+          <input id="conn-port" class="inp-field" type="number" min="1" max="65535" placeholder="14550">
+        </div>
+      </div>
+
+      <button id="conn-btn" class="btn-connect">🔌 連線</button>
+
+      <div class="connection-status-card">
+        <div class="conn-status-row">
+          <span class="status-dot offline" id="usv-dot"></span>
+          <span id="usv-status-text">未連線</span>
+        </div>
+        <div class="conn-route" id="conn-str-label">udp:—</div>
+        <div class="diag-grid">
+          <div class="diag-box">
+            <span class="diag-title">LOCAL</span>
+            <span id="diag-local-port">port: —</span>
+          </div>
+          <div class="diag-arrow">控制 / 遙測</div>
+          <div class="diag-box">
+            <span class="diag-title">REMOTE</span>
+            <span id="diag-remote-port">port: —</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title">Engine & Authority</div>
+      <div class="btn-row two-up">
+        <button id="web-arm-btn" class="btn-arm">ARM</button>
+        <button id="web-disarm-btn" class="btn-disarm">DISARM</button>
+      </div>
+
+      <div class="btn-stack">
+        <button id="mode-manual-btn" class="btn-mode">MANUAL</button>
+        <button id="mode-guided-btn" class="btn-mode">GUIDED</button>
+        <button id="mode-rtl-btn" class="btn-mode">RTL</button>
+      </div>
+
+      <div class="section-title" style="margin-top:14px">Operator Control</div>
+      <div class="sysid-row">
+        <div>
+          <label class="field-label" for="gcs-sysid">GCS System ID</label>
+          <input id="gcs-sysid" class="inp-field" type="number" min="1" max="254" placeholder="255">
+        </div>
+        <button id="sysid-btn" class="btn-sysid">設定</button>
+      </div>
+
+      <div id="auth-status" class="auth-status auth-none">— 未請求控制權 —</div>
+
+      <div class="btn-row two-up">
+        <button id="acquire-ctrl-btn" class="btn-acquire">取得控制權</button>
+        <button id="release-ctrl-btn" class="btn-release">釋放控制權</button>
+      </div>
+
+      <div class="toggle-row">
+        <div>
+          <div class="field-label">Web Control Authority</div>
+          <div id="web-ctrl-status" class="toggle-status ctrl-off">⛔ 停用中（硬體輸入有效）</div>
+        </div>
+        <label class="switch">
+          <input id="web-ctrl-en" type="checkbox">
+          <span class="slider-pill"></span>
+        </label>
+      </div>
+
+      <div class="check-row">
+        <label><input id="chk-auto-center" type="checkbox" checked> 方向自動回中</label>
+      </div>
+
+      <div class="tip-block">
+        <div class="tip-title">操作提示</div>
+        <ul>
+          <li>啟用 Web Control 後，網頁控制會接管操舵與油門。</li>
+          <li>釋放方向滑桿時可自動回中。</li>
+          <li>DISARM 會同步將左右油門重設為 1500 us。</li>
+        </ul>
+      </div>
+
+      <div class="section-title">LED Indicators</div>
+      <div class="led-grid">
+        <div class="led-card" data-led="1"><div class="led-dot" id="led1-dot"></div><span>LED1</span></div>
+        <div class="led-card" data-led="2"><div class="led-dot" id="led2-dot"></div><span>LED2</span></div>
+        <div class="led-card" data-led="3"><div class="led-dot" id="led3-dot"></div><span>LED3</span></div>
+        <div class="led-card" data-led="4"><div class="led-dot" id="led4-dot"></div><span>LED4</span></div>
+      </div>
+
+      <!-- LED 選色浮動面板 -->
+      <div id="led-picker" class="led-picker" style="display:none">
+        <div class="led-picker-title">LED <span id="led-picker-num">1</span> 顏色</div>
+        <div class="led-picker-colors">
+          <button class="led-color-btn" data-color="red"    style="background:#FF4D4D">紅</button>
+          <button class="led-color-btn" data-color="green"  style="background:#00FF66">綠</button>
+          <button class="led-color-btn" data-color="blue"   style="background:#007ACC">藍</button>
+          <button class="led-color-btn" data-color="yellow" style="background:#FFCC00">黃</button>
+          <button class="led-color-btn" data-color="off"    style="background:#333">關</button>
+          <button class="led-color-btn auto" data-color="auto">自動</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel center-panel">
+      <div class="section-title">Cockpit Controls</div>
+      <div class="cockpit-grid disabled" id="cockpit-grid">
+        <div class="throttle-lane">
+          <div class="slider-caption">LEFT THR</div>
+          <div class="vslider-shell yellow">
+            <input id="left-thr-ctrl" class="vslider yellow" type="range" min="1000" max="2000" value="1500" step="10">
+          </div>
+          <div class="slider-value" id="left-thr-ctrl-val">1500 us (0%)</div>
+          <button id="left-thr-center" class="mini-center-btn">CENTER</button>
+        </div>
+
+        <div class="steer-zone">
+          <div class="steer-header">
+            <span class="slider-caption">STEERING</span>
+            <span class="slider-value" id="steer-val-text">1500 us (居中)</span>
+          </div>
+          <input id="steer-slider" class="steer-slider" type="range" min="1000" max="2000" value="1500" step="10">
+          <button id="steer-center-btn" class="center-btn">回中</button>
+        </div>
+
+        <div class="throttle-lane">
+          <div class="slider-caption">RIGHT THR</div>
+          <div class="vslider-shell orange">
+            <input id="right-thr-ctrl" class="vslider orange" type="range" min="1000" max="2000" value="1500" step="10">
+          </div>
+          <div class="slider-value" id="right-thr-ctrl-val">1500 us (0%)</div>
+          <button id="right-thr-center" class="mini-center-btn">CENTER</button>
+        </div>
+      </div>
+
+      <div class="section-title">Hardware Input Monitor</div>
+      <div class="hardware-monitor">
+        <div class="monitor-card steer-monitor">
+          <svg viewBox="0 0 220 160" class="monitor-steer-svg">
+            <path d="M 40 125 A 70 70 0 0 1 180 125" class="steer-base"></path>
+            <path id="steer-arc" d="M 110 55 A 0 0 0 0 0 110 55" class="steer-active"></path>
+            
+            <!-- Vessel Hull Outline Graphic -->
+            <path id="web-vessel-hull" d="M 110 65 L 124 85 L 124 125 L 96 125 L 96 85 Z" class="vessel-hull"></path>
+            
+            <!-- Vessel Rudder Line -->
+            <line x1="110" y1="125" x2="110" y2="145" id="web-rudder" class="vessel-rudder"></line>
+            
+            <line x1="110" y1="125" x2="110" y2="62" id="steer-needle" class="steer-needle"></line>
+            <circle cx="110" cy="125" r="6" class="steer-hub"></circle>
+          </svg>
+          <div class="monitor-value" id="steer-val">1500 us (0%)</div>
+        </div>
+
+        <div class="monitor-card thr-monitor">
+          <div class="thr-bar-group">
+            <div class="thr-bar-col">
+              <span class="bar-label yellow">LEFT</span>
+              <div class="thr-bar-track"><div id="left-thr-bar" class="thr-bar-fill yellow"></div></div>
+              <span id="left-thr-val">1500 us</span>
+            </div>
+            <div class="thr-bar-col">
+              <span class="bar-label orange">RIGHT</span>
+              <div class="thr-bar-track"><div id="right-thr-bar" class="thr-bar-fill orange"></div></div>
+              <span id="right-thr-val">1500 us</span>
+            </div>
+          </div>
+          <div class="engine-line">
+            <span>ENGINE</span>
+            <span id="engine-badge" class="engine-badge off">OFF</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel right-panel">
+      <div class="section-title">Telemetry Dashboard</div>
+
+      <div class="telemetry-block">
+        <div class="block-head">Battery</div>
+        <div class="kv-line"><span id="batt-pct-val">0%</span><span id="batt-volt-val">0.00 V</span></div>
+        <div class="battery-track"><div id="batt-bar"></div></div>
+      </div>
+
+      <div class="telemetry-block">
+        <div class="block-head">Attitude</div>
+        <div class="kv-grid">
+          <span>Yaw</span><span id="yaw-val">0.0 ° (正北)</span>
+          <span>Roll</span><span id="roll-val">0.0 °</span>
+          <span>Pitch</span><span id="pitch-val">0.0 °</span>
+        </div>
+      </div>
+
+      <div class="telemetry-block">
+        <div class="block-head">Speed / HUD</div>
+        <div class="telemetry-big" id="speed-val">0.00 m/s (0.00 節)</div>
+        <div class="kv-grid single-gap">
+          <span>Throttle</span><span id="hud-throttle">0 %</span>
+        </div>
+      </div>
+
+      <div class="telemetry-block">
+        <div class="block-head">GPS</div>
+        <div class="kv-line"><span id="gps-fix-val" class="gps-badge nofix">無定位</span><span id="gps-sats-val">0 sats</span></div>
+        <div class="kv-grid">
+          <span>Latitude</span><span id="gps-lat">—</span>
+          <span>Longitude</span><span id="gps-lon">—</span>
+        </div>
+      </div>
+
+      <div class="telemetry-block">
+        <div class="block-head">Servo Outputs</div>
+        <div class="kv-grid">
+          <span>Servo 1</span><span id="servo1-raw">1500 us</span>
+          <span>Servo 3</span><span id="servo3-raw">1500 us</span>
+          <span>Servo 4</span><span id="servo4-raw">1500 us</span>
+        </div>
+      </div>
+
+      <div class="telemetry-block">
+        <div class="block-head">Comms Stats</div>
+        <div class="kv-grid">
+          <span>Heartbeat</span><span id="hb-age">—</span>
+          <span>Failsafe</span><span id="failsafe-val">正常</span>
+          <span>Connection</span><span id="conn-badge" class="conn-badge off">未連線</span>
+          <span>TX</span><span id="tx-count">0</span>
+          <span>RX</span><span id="rx-count">0</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <div id="status-text">系統待命中。</div>
+    <div id="comm-stats">接收: 0 | 發送: 0 | 延遲: -- ms</div>
+  </footer>
+
+  <script src="libs/socket.io.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
