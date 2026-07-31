@@ -55,10 +55,12 @@ void set_led4_color(bool r, bool g, bool b) {
 }
 
 // ── RouterBridge handler ──────────────────────────────────────────────────────
+// NOTE: string params must be `String` (arduino::msgpack::str_t) — RPClite's
+// MsgPack unpacker can only deserialize into a String&, not a const char*.
 void update_display(int speed_x10, int heading, int bat, int fix, int armed, int mode,
                     int32_t lat_e7, int32_t lon_e7,
-                    const char* remote_ip, int remote_port,
-                    const char* local_ip, int local_port,
+                    String remote_ip, int remote_port,
+                    String local_ip, int local_port,
                     int control_authority) {
     g_vessel.speed_x10   = (uint16_t)speed_x10;
     g_vessel.heading     = (uint16_t)heading;
@@ -68,10 +70,10 @@ void update_display(int speed_x10, int heading, int bat, int fix, int armed, int
     g_vessel.mode        = (uint8_t)mode;
     g_vessel.lat_degE7   = lat_e7;
     g_vessel.lon_degE7   = lon_e7;
-    strncpy(g_vessel.remote_ip, remote_ip, sizeof(g_vessel.remote_ip) - 1);
+    strncpy(g_vessel.remote_ip, remote_ip.c_str(), sizeof(g_vessel.remote_ip) - 1);
     g_vessel.remote_ip[sizeof(g_vessel.remote_ip) - 1] = '\0';
     g_vessel.remote_port = (uint16_t)remote_port;
-    strncpy(g_vessel.local_ip, local_ip, sizeof(g_vessel.local_ip) - 1);
+    strncpy(g_vessel.local_ip, local_ip.c_str(), sizeof(g_vessel.local_ip) - 1);
     g_vessel.local_ip[sizeof(g_vessel.local_ip) - 1] = '\0';
     g_vessel.local_port  = (uint16_t)local_port;
     g_vessel.control_authority = (uint8_t)control_authority;
