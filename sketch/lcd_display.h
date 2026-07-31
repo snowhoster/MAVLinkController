@@ -27,16 +27,19 @@
 
 // 定義船體狀態結構體
 struct VesselStatus {
-    uint16_t speed_x10;    // knots * 10
-    uint16_t heading;      // degrees 0–359
-    uint8_t  battery_pct;  // 0–100
-    uint8_t  gps_fix;      // 0=none 2=2D 3=3D
-    uint8_t  gps_sats;     // number of satellites
+    uint16_t speed_x10;     // knots * 10
+    uint16_t heading;       // degrees 0–359
+    uint8_t  battery_pct;   // 0–100
+    uint8_t  gps_fix;       // 0=none 2=2D 3=3D (colors the GPS position row)
     bool     armed;
-    uint8_t  mode;         // see MODE_* constants
-    uint8_t  link_quality; // 0–100
-    int16_t  rssi_dbm;     // 訊號強度 (dBm)
-    uint16_t p_latency;    // 網路延遲 (ms)
+    uint8_t  mode;          // see MODE_* constants
+    int32_t  lat_degE7;     // GPS latitude  * 1e7
+    int32_t  lon_degE7;     // GPS longitude * 1e7
+    char     remote_ip[16]; // 船舶 (USV) IP
+    uint16_t remote_port;
+    char     local_ip[16];  // 本機 (MPU) IP
+    uint16_t local_port;
+    uint8_t  control_authority; // 0=none 1=pending 2=granted 3=denied (header badge)
 };
 
 // ── UTF-8 Drawing Helper ─────────────────────────────────────────────────────
@@ -114,10 +117,12 @@ static uint16_t battery_color(uint8_t pct) {
     return C_RED;
 }
 
-static uint16_t link_color(uint8_t q) {
-    if (q > 70) return C_GREEN;
-    if (q > 30) return C_YELLOW;
-    return C_RED;
+// Compact ASCII-only text (IP:Port strings) at half height, so long strings still fit their row.
+static void draw_small_ascii(Adafruit_ILI9341* tft, int16_t x, int16_t y, const char* str, uint16_t color, uint16_t bg) {
+    tft->setTextSize(1);
+    tft->setTextColor(color, bg);
+    tft->setCursor(x, y);
+    tft->print(str);
 }
 
 static const char* ch_mode_str(uint8_t m) {
@@ -155,12 +160,12 @@ inline void lcd_draw_static(Adafruit_ILI9341* tft) {
     draw_utf8_string(tft, 4, 24, "速度", C_GRAY, C_BG);
     draw_utf8_string(tft, 4, 48, "航向", C_GRAY, C_BG);
     draw_utf8_string(tft, 4, 72, "電量", C_GRAY, C_BG);
-    draw_utf8_string(tft, 4, 96, "定位", C_GRAY, C_BG);
+    draw_utf8_string(tft, 4, 96, "GPS位置", C_GRAY, C_BG);
     draw_utf8_string(tft, 4, 120, "模式", C_GRAY, C_BG);
-    draw_utf8_string(tft, 4, 144, "訊號", C_GRAY, C_BG);
+    draw_utf8_string(tft, 4, 144, "通訊", C_GRAY, C_BG);
     draw_utf8_string(tft, 4, 168, "引擎", C_GRAY, C_BG);
-    draw_utf8_string(tft, 4, 192, "延遲", C_GRAY, C_BG);
-    draw_utf8_string(tft, 4, 216, "強度", C_GRAY, C_BG);
+    draw_utf8_string(tft, 4, 192, "本機", C_GRAY, C_BG);
+    draw_utf8_string(tft, 4, 216, "舵角", C_GRAY, C_BG);
 
     // Static boat labels (Right column)
     draw_utf8_string(tft, 170, 45, "左油門", C_GRAY, C_BG);
@@ -181,6 +186,17 @@ inline void lcd_update_dynamic(Adafruit_ILI9341* tft,
                                bool     sw_state) {
     char buf[24];
 
+    // ── Header: control-authority badge (dot) ─────────────────────────────────
+    // 0=none(gray) 1=pending(yellow) 2=granted(green) 3=denied(red)
+    uint16_t auth_color;
+    switch (vs->control_authority) {
+        case 2:  auth_color = C_GREEN;  break;
+        case 1:  auth_color = C_YELLOW; break;
+        case 3:  auth_color = C_RED;    break;
+        default: auth_color = C_GRAY;   break;
+    }
+    tft->fillCircle(308, 10, 6, auth_color);
+
     // ── Left Column Telemetry Update ──────────────────────────────────────────
     // Row 1: Speed
     snprintf(buf, sizeof(buf), "%d.%d節", vs->speed_x10 / 10, vs->speed_x10 % 10);
@@ -198,42 +214,42 @@ inline void lcd_update_dynamic(Adafruit_ILI9341* tft,
     snprintf(buf, sizeof(buf), "%d%%", vs->battery_pct);
     draw_utf8_string(tft, 125, 72, buf, C_WHITE, C_BG);
 
-    // Row 4: GPS
-    const char* fix_str = "無定位";
-    uint16_t fix_color = C_RED;
-    if (vs->gps_fix >= 3) {
-        fix_str = "3D定位";
-        fix_color = C_GREEN;
-    } else if (vs->gps_fix >= 2) {
-        fix_str = "2D定位";
-        fix_color = C_YELLOW;
+    // Row 4: GPS Position (label is wider — content starts further right)
+    tft->fillRect(80, 96, 76, 16, C_BG);
+    if (vs->gps_fix < 2) {
+        draw_utf8_string(tft, 80, 96, "無定位", C_RED, C_BG);
+    } else {
+        uint16_t fix_color = (vs->gps_fix >= 3) ? C_GREEN : C_YELLOW;
+        int lat_deg  = vs->lat_degE7 / 10000000;
+        int lat_frac = abs((int)(vs->lat_degE7 % 10000000)) / 100000;
+        int lon_deg  = vs->lon_degE7 / 10000000;
+        int lon_frac = abs((int)(vs->lon_degE7 % 10000000)) / 100000;
+        snprintf(buf, sizeof(buf), "%d.%02d,%d.%02d", lat_deg, lat_frac, lon_deg, lon_frac);
+        draw_small_ascii(tft, 80, 100, buf, fix_color, C_BG);
     }
-    snprintf(buf, sizeof(buf), "%s %d星", fix_str, vs->gps_sats);
-    tft->fillRect(45, 96, 110, 16, C_BG);
-    draw_utf8_string(tft, 45, 96, buf, fix_color, C_BG);
 
     // Row 5: Mode
     tft->fillRect(45, 120, 110, 16, C_BG);
     draw_utf8_string(tft, 45, 120, ch_mode_str(vs->mode), C_CYAN, C_BG);
 
-    // Row 6: Link
-    draw_hbar(tft, 45, 147, 75, 10, vs->link_quality, 0, 100, link_color(vs->link_quality));
-    tft->fillRect(125, 144, 32, 16, C_BG);
-    snprintf(buf, sizeof(buf), "%d%%", vs->link_quality);
-    draw_utf8_string(tft, 125, 144, buf, C_WHITE, C_BG);
+    // Row 6: Comms — vessel (remote) IP:Port
+    tft->fillRect(45, 144, 113, 16, C_BG);
+    snprintf(buf, sizeof(buf), "%s:%u", vs->remote_ip, vs->remote_port);
+    draw_small_ascii(tft, 45, 148, buf, C_WHITE, C_BG);
 
     // Row 7: Engine Switch
     tft->fillRect(45, 168, 110, 16, C_BG);
     draw_utf8_string(tft, 45, 168, vs->armed ? "啟動" : "關閉", vs->armed ? C_GREEN : C_RED, C_BG);
 
-    // Row 8: Latency
-    snprintf(buf, sizeof(buf), "%dms", vs->p_latency);
-    tft->fillRect(45, 192, 110, 16, C_BG);
-    draw_utf8_string(tft, 45, 192, buf, C_WHITE, C_BG);
+    // Row 8: Local (MPU) IP:Port
+    tft->fillRect(45, 192, 113, 16, C_BG);
+    snprintf(buf, sizeof(buf), "%s:%u", vs->local_ip, vs->local_port);
+    draw_small_ascii(tft, 45, 196, buf, C_WHITE, C_BG);
 
-    // Row 9: Strength (RSSI)
-    snprintf(buf, sizeof(buf), "%ddBm", vs->rssi_dbm);
+    // Row 9: Rudder angle (degrees, max deflection ±45°)
+    int steer_deg = (int)(steering * 45L / 1000L);
     tft->fillRect(45, 216, 110, 16, C_BG);
+    snprintf(buf, sizeof(buf), "%+d度", steer_deg);
     draw_utf8_string(tft, 45, 216, buf, C_WHITE, C_BG);
 
     // ── Right Column: Throttles, Steering & Vessel Graphics ──────────────────
@@ -268,10 +284,8 @@ inline void lcd_update_dynamic(Adafruit_ILI9341* tft,
     tft->fillRect(220, 140, 40, 22, C_BG); // Erase old rudder area
     tft->drawLine(222, 140, 258, 140, boat_color); // Restore Stern line
     
-    // Calculate rudder line end point based on steering angle
-    // steering maps from -1000 (left) to 1000 (right).
-    // Assume max rudder deflection is 45 degrees (0.7853 radians).
-    float angle_rad = (steering / 1000.0) * 0.7853;
+    // Calculate rudder line end point based on steering angle (steer_deg, ±45° max)
+    float angle_rad = steer_deg * DEG_TO_RAD;
     int rx = 240 + (int)(sin(angle_rad) * 15.0);
     int ry = 140 + (int)(cos(angle_rad) * 15.0);
     

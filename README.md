@@ -149,7 +149,7 @@ MCU 與 MPU 之間透過 `Arduino_RouterBridge`（基於 RPClite + MsgPack）進
 | 方向 | 方法名稱 | 類型 | 頻率 | 內容 |
 |------|---------|------|:----:|------|
 | MCU → MPU | `on_inputs` | `notify`（單向） | 10 Hz + 邊緣觸發 | steering, left_thr, right_thr, sw_state, sw_edge |
-| MPU → MCU | `update_display` | `call`（雙向 RPC） | 5 Hz | speed_x10, heading, bat, gps_fix, gps_sats, armed, mode, lq |
+| MPU → MCU | `update_display` | `call`（雙向 RPC） | 5 Hz | speed_x10, heading, bat, gps_fix, armed, mode, lat_e7, lon_e7, remote_ip, remote_port, local_ip, local_port, control_authority |
 
 **sw_edge 代碼：**
 

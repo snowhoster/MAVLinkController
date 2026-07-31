@@ -17,7 +17,7 @@ let webCtrlEnabled = false;
 let lastCtrlSend = 0;
 let _connFieldsDirty = false;   // true while user has unsaved edits in connection fields
 let usvConnected = false;
-let currentConn = { protocol: 'udp', remote_ip: '', remote_port: '', local_port: '' };
+let currentConn = { protocol: 'udp', remote_ip: '', remote_port: '', local_ip: '', local_port: '' };
 
 function el(id) { return document.getElementById(id); }
 function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
@@ -72,10 +72,10 @@ function steeringCtrlToUs(val) {
 function refreshFooterStatus() {
   const remote = currentConn.remote_ip || '—';
   const remotePort = currentConn.remote_port || '—';
-  const localPort = currentConn.local_port || '—';
+  const local = currentConn.local_ip ? `${currentConn.local_ip}:${currentConn.local_port || '—'}` : (currentConn.local_port || '—');
   el('status-text').textContent = usvConnected
-    ? `網絡連線已建立。發送目標: ${remote}:${remotePort} | 監聽端口: ${localPort}`
-    : `USV 尚未連線。發送目標: ${remote}:${remotePort} | 監聽端口: ${localPort}`;
+    ? `網絡連線已建立。發送目標: ${remote}:${remotePort} | 本機監聽: ${local}`
+    : `USV 尚未連線。發送目標: ${remote}:${remotePort} | 本機監聽: ${local}`;
 }
 
 function sendControl(force = false) {
@@ -174,8 +174,8 @@ el('conn-btn').addEventListener('click', () => {
   _connFieldsDirty = false;   // allow server state to sync fields again after submit
 });
 
-function updateConnectionUI({ protocol, remote_ip, remote_port, local_port, connected }) {
-  currentConn = { protocol, remote_ip, remote_port, local_port };
+function updateConnectionUI({ protocol, remote_ip, remote_port, local_ip, local_port, connected }) {
+  currentConn = { protocol, remote_ip, remote_port, local_ip, local_port };
   usvConnected = Boolean(connected);
 
   if (!_connFieldsDirty) {
@@ -185,10 +185,10 @@ function updateConnectionUI({ protocol, remote_ip, remote_port, local_port, conn
     el('conn-local-port').value = local_port || '';
   }
 
-  el('diag-local-port').textContent = local_port ? `port: ${local_port}` : 'port: —';
+  el('diag-local-port').textContent = local_port ? `${local_ip || '0.0.0.0'}:${local_port}` : 'port: —';
   el('diag-remote-port').textContent = remote_ip ? `port: ${remote_port}` : 'port: —';
   el('conn-str-label').textContent = local_port
-    ? `bind:${local_port} → ${remote_ip}:${remote_port}`
+    ? `bind:${local_ip || '0.0.0.0'}:${local_port} → ${remote_ip}:${remote_port}`
     : `${protocol}:${remote_ip}:${remote_port}`;
 
   setDotState(el('usv-dot'), usvConnected);

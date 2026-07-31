@@ -22,6 +22,12 @@
 #define EDGE_RISING  1   // switch OFF → ON  (ARM)
 #define EDGE_FALLING 2   // switch ON  → OFF (DISARM)
 
+// Control-authority codes (must match Python _AUTH_CODE)
+#define AUTH_NONE    0
+#define AUTH_PENDING 1
+#define AUTH_GRANTED 2
+#define AUTH_DENIED  3
+
 // ── Globals ───────────────────────────────────────────────────────────────────
 Adafruit_ILI9341 tft(TFT_CS, TFT_DC, TFT_RST);
 
@@ -48,20 +54,27 @@ void set_led4_color(bool r, bool g, bool b) {
     digitalWrite(LED4_B, b ? LOW : HIGH);
 }
 
-// ── RouterBridge handler — 修正為 10 個參數以支援新版診斷區 ────────────────────
-void update_display(int speed_x10, int heading, int bat,
-                    int fix, int sats, int armed, int mode, int lq,
-                    int rssi, int latency) {
-    g_vessel.speed_x10    = (uint16_t)speed_x10;
-    g_vessel.heading      = (uint16_t)heading;
-    g_vessel.battery_pct  = (uint8_t)bat;
-    g_vessel.gps_fix      = (uint8_t)fix;
-    g_vessel.gps_sats     = (uint8_t)sats;
-    g_vessel.armed        = (bool)armed;
-    g_vessel.mode         = (uint8_t)mode;
-    g_vessel.link_quality = (uint8_t)lq;
-    g_vessel.rssi_dbm     = (int16_t)rssi;
-    g_vessel.p_latency    = (uint16_t)latency;
+// ── RouterBridge handler ──────────────────────────────────────────────────────
+void update_display(int speed_x10, int heading, int bat, int fix, int armed, int mode,
+                    int32_t lat_e7, int32_t lon_e7,
+                    const char* remote_ip, int remote_port,
+                    const char* local_ip, int local_port,
+                    int control_authority) {
+    g_vessel.speed_x10   = (uint16_t)speed_x10;
+    g_vessel.heading     = (uint16_t)heading;
+    g_vessel.battery_pct = (uint8_t)bat;
+    g_vessel.gps_fix     = (uint8_t)fix;
+    g_vessel.armed       = (bool)armed;
+    g_vessel.mode        = (uint8_t)mode;
+    g_vessel.lat_degE7   = lat_e7;
+    g_vessel.lon_degE7   = lon_e7;
+    strncpy(g_vessel.remote_ip, remote_ip, sizeof(g_vessel.remote_ip) - 1);
+    g_vessel.remote_ip[sizeof(g_vessel.remote_ip) - 1] = '\0';
+    g_vessel.remote_port = (uint16_t)remote_port;
+    strncpy(g_vessel.local_ip, local_ip, sizeof(g_vessel.local_ip) - 1);
+    g_vessel.local_ip[sizeof(g_vessel.local_ip) - 1] = '\0';
+    g_vessel.local_port  = (uint16_t)local_port;
+    g_vessel.control_authority = (uint8_t)control_authority;
 }
 
 // ── Setup ─────────────────────────────────────────────────────────────────────

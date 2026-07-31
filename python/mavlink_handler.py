@@ -318,6 +318,14 @@ class MAVLinkHandler:
             return int(100 - (age - 2.0) * 16.7)
         return 0
 
+    @property
+    def local_bound_port(self) -> int:
+        """Actual local UDP port in use (resolves the real port when local_port=0/auto)."""
+        try:
+            return self._conn.port.getsockname()[1]
+        except Exception:
+            return self.local_port
+
     # ── Private: mode change ──────────────────────────────────────────────────
 
     def _send_set_mode(self, custom_mode: int):

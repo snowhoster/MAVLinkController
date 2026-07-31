@@ -9,6 +9,7 @@ WebUI:   ui.send_message("state", {...})   — broadcasts all data to browser at
 import json
 import logging
 import os
+import socket
 import time
 
 from arduino.app_utils import App, Bridge, Leds
@@ -28,7 +29,7 @@ _DEFAULT_CFG = {
     "protocol":    "udp",
     "remote_ip":   "192.168.1.100",
     "remote_port": 14550,
-    "local_port":  0,          # 0 = auto (OS assigns port)
+    "local_port":  14551,      # fixed port so the USV can reply-to-sender (symmetric UDP socket)
 }
 
 
@@ -58,6 +59,21 @@ def _save_config(cfg: dict):
 
 _usv_config = _load_config()
 
+
+def _get_local_ip(remote_ip: str) -> str:
+    """Best-effort local outbound IP for the route toward remote_ip (no packets sent)."""
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect((remote_ip, 1))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return "0.0.0.0"
+
+
+_local_ip = _get_local_ip(_usv_config["remote_ip"])
+
 # ── MAVLink handler ───────────────────────────────────────────────────────────
 mavlink = MAVLinkHandler(
     protocol    = _usv_config["protocol"],
@@ -72,6 +88,9 @@ ui = WebUI()
 # Switch edge constants (must match sketch EDGE_* defines)
 EDGE_RISING  = 1   # switch ON  → ARM
 EDGE_FALLING = 2   # switch OFF → DISARM
+
+# Control-authority state → int code sent to the MCU (must match sketch AUTH_* defines)
+_AUTH_CODE = {"none": 0, "pending": 1, "granted": 2, "denied": 3}
 
 _last_display_push = 0.0
 
@@ -343,7 +362,7 @@ def _handle_set_gcs_sysid(_, data: dict):
 
 def _handle_connect_usv(_, data: dict):
     """Web browser requesting USV connection change."""
-    global _usv_config
+    global _usv_config, _local_ip
     protocol    = str(data.get("protocol",    "udp")).lower()
     remote_ip   = str(data.get("remote_ip",   "192.168.1.100")).strip()
     remote_port = int(data.get("remote_port", 14550))
@@ -370,6 +389,7 @@ def _handle_connect_usv(_, data: dict):
     logger.info("Reconnecting  local:%s → %s:%s (%s)",
                 local_port or "auto", remote_ip, remote_port, protocol)
     mavlink.reconnect(protocol, remote_ip, remote_port, local_port)
+    _local_ip = _get_local_ip(remote_ip)
 
 
 def loop():
@@ -384,13 +404,16 @@ def loop():
             int(mavlink.speed_knots * 10),  # 1. speed_x10
             int(mavlink.heading),           # 2. heading
             int(mavlink.battery_pct),       # 3. bat
-            int(mavlink.gps_fix),           # 4. fix
-            int(mavlink.gps_sats),          # 5. sats
-            int(mavlink.armed),             # 6. armed
-            int(mavlink.mode),              # 7. mode
-            int(lq),                        # 8. link quality 0-100
-            -65,          # 9. 新增：傳入 RSSI 強度 (例如 -65)
-            45         # 10. 新增：傳入 RTT 延遲 (例如 45)
+            int(mavlink.gps_fix),           # 4. fix (colors the GPS position row)
+            int(mavlink.armed),             # 5. armed
+            int(mavlink.mode),              # 6. mode
+            int(mavlink.lat_degE7),         # 7. GPS latitude  (deg * 1e7)
+            int(mavlink.lon_degE7),         # 8. GPS longitude (deg * 1e7)
+            _usv_config["remote_ip"],       # 9. 通訊：船舶 IP
+            int(_usv_config["remote_port"]),# 10. 通訊：船舶 Port
+            _local_ip,                      # 11. 本機 IP
+            int(mavlink.local_bound_port),  # 12. 本機 Port
+            _AUTH_CODE.get(mavlink.control_authority, 0),  # 13. 控制權狀態 (header badge)
         )
 
         # Push full state to web browser
@@ -400,7 +423,8 @@ def loop():
                 "protocol":    _usv_config["protocol"],
                 "remote_ip":   _usv_config["remote_ip"],
                 "remote_port": _usv_config["remote_port"],
-                "local_port":  _usv_config["local_port"],
+                "local_ip":    _local_ip,
+                "local_port":  mavlink.local_bound_port,
                 "connected":   lq > 0,
             },
             "inputs": {
