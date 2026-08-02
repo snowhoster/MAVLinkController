@@ -414,6 +414,7 @@ def loop():
             _local_ip,                      # 11. 本機 IP
             int(mavlink.local_bound_port),  # 12. 本機 Port
             _AUTH_CODE.get(mavlink.control_authority, 0),  # 13. 控制權狀態 (header badge)
+            int(lq > 0),                    # 14. MAVLink 連線狀態 (0=斷線 1=已連線)
         )
 
         # Push full state to web browser

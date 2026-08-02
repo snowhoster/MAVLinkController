@@ -40,6 +40,7 @@ struct VesselStatus {
     char     local_ip[16];  // 本機 (MPU) IP
     uint16_t local_port;
     uint8_t  control_authority; // 0=none 1=pending 2=granted 3=denied (header badge)
+    bool     link_ok;      // MAVLink RX link status (link_quality() > 0 on the MPU side)
 };
 
 // ── UTF-8 Drawing Helper ─────────────────────────────────────────────────────
@@ -232,10 +233,14 @@ inline void lcd_update_dynamic(Adafruit_ILI9341* tft,
     tft->fillRect(45, 120, 110, 16, C_BG);
     draw_utf8_string(tft, 45, 120, ch_mode_str(vs->mode), C_CYAN, C_BG);
 
-    // Row 6: Comms — vessel (remote) IP:Port
+    // Row 6: Comms — vessel (remote) IP:Port, colored/labelled by MAVLink link status
     tft->fillRect(45, 144, 113, 16, C_BG);
-    snprintf(buf, sizeof(buf), "%s:%u", vs->remote_ip, vs->remote_port);
-    draw_small_ascii(tft, 45, 148, buf, C_WHITE, C_BG);
+    if (vs->link_ok) {
+        snprintf(buf, sizeof(buf), "%s:%u", vs->remote_ip, vs->remote_port);
+        draw_small_ascii(tft, 45, 148, buf, C_WHITE, C_BG);
+    } else {
+        draw_utf8_string(tft, 45, 144, "斷線", C_RED, C_BG);
+    }
 
     // Row 7: Engine Switch
     tft->fillRect(45, 168, 110, 16, C_BG);
