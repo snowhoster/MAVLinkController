@@ -19,11 +19,19 @@
 #define C_BG        0x0841  // Dark navy background
 #define C_HEADER    0x0210  // Dark blue header
 
-// USV display modes
+// ArduPilot Rover/Boat custom_mode values — these are the raw MAVLink values
+// carried by HEARTBEAT.custom_mode, NOT display indices. They must stay in sync
+// with mavlink_handler.py's MODE_* constants.
+//
+// The controller only ever commands MANUAL and ACRO; the rest are listed so an
+// unexpected vessel-side mode is still labelled correctly rather than silently
+// falling through to "手動".
 #define MODE_MANUAL  0
-#define MODE_GUIDED  1
-#define MODE_AUTO    2
-#define MODE_HOLD    3
+#define MODE_ACRO    1    // 定向：方向盤=轉向速率，回中鎖定當前航向
+#define MODE_HOLD    4
+#define MODE_AUTO   10
+#define MODE_RTL    11
+#define MODE_GUIDED 15
 
 // 定義船體狀態結構體
 struct VesselStatus {
@@ -39,8 +47,15 @@ struct VesselStatus {
     uint16_t remote_port;
     char     local_ip[16];  // 本機 (MPU) IP
     uint16_t local_port;
-    uint8_t  control_authority; // 0=none 1=pending 2=granted 3=denied (header badge)
+    uint8_t  control_authority; // 0=none 1=pending 2=granted 3=denied 4=estop-latched
 };
+
+// control_authority 代碼（須與 sketch.ino / Python _AUTH_CODE 一致）
+#define AUTHV_NONE    0
+#define AUTHV_PENDING 1
+#define AUTHV_GRANTED 2
+#define AUTHV_DENIED  3
+#define AUTHV_ESTOP   4
 
 // ── UTF-8 Drawing Helper ─────────────────────────────────────────────────────
 inline void draw_utf8_string(Adafruit_ILI9341* tft, int16_t x, int16_t y, const char* str, uint16_t color, uint16_t bg) {
@@ -125,13 +140,18 @@ static void draw_small_ascii(Adafruit_ILI9341* tft, int16_t x, int16_t y, const 
     tft->print(str);
 }
 
+// Unknown modes fall back to ASCII rather than a plausible-looking Chinese
+// label — showing "手動" for a mode we don't recognise would be worse than
+// showing nothing, because the operator would act on it.
 static const char* ch_mode_str(uint8_t m) {
     switch (m) {
         case MODE_MANUAL: return "手動";
-        case MODE_GUIDED: return "引導";
-        case MODE_AUTO:   return "自動";
+        case MODE_ACRO:   return "定向";
         case MODE_HOLD:   return "保持";
-        default:          return "手動";
+        case MODE_AUTO:   return "自動";
+        case MODE_RTL:    return "RTL";
+        case MODE_GUIDED: return "引導";
+        default:          return "???";
     }
 }
 
@@ -177,23 +197,56 @@ inline void lcd_draw_static(Adafruit_ILI9341* tft) {
     tft->drawRect(285, 70, 10, 70, C_DARKGRAY);
 }
 
+// ── Emergency-stop banner ─────────────────────────────────────────────────────
+// 佔滿整個畫面，取代所有遙測顯示 — 急停期間唯一該被看見的資訊就是急停本身。
+inline void lcd_draw_estop_banner(Adafruit_ILI9341* tft) {
+    tft->fillScreen(C_RED);
+    tft->fillRect(20, 55, 280, 130, C_BLACK);
+    tft->drawRect(20, 55, 280, 130, C_YELLOW);
+    tft->drawRect(21, 56, 278, 128, C_YELLOW);
+
+    draw_utf8_string(tft, 128, 75,  "緊急停止",   C_RED,   C_BLACK);
+    draw_utf8_string(tft, 120, 105, "通訊已切斷", C_WHITE, C_BLACK);
+    draw_small_ascii(tft, 76, 145, "RESET E-STOP, THEN HOLD CTRL 2s", C_YELLOW, C_BLACK);
+}
+
 // ── Dynamic update ────────────────────────────────────────────────────────────
 inline void lcd_update_dynamic(Adafruit_ILI9341* tft,
                                const VesselStatus* vs,
                                int16_t  steering,
                                uint16_t l_thr,
                                uint16_t r_thr,
-                               bool     sw_state) {
+                               bool     l_eng_on,
+                               bool     r_eng_on,
+                               bool     estop_local,
+                               bool     mode_sw_acro) {
     char buf[24];
+
+    // ── Emergency stop takes over the whole screen ────────────────────────────
+    // estop_local  = 本機按鈕當下狀態（立即反應，不等 MPU）
+    // AUTHV_ESTOP  = MPU 端閂鎖中（實體按鈕已復位但尚未解除閂鎖時仍需顯示）
+    static bool s_banner_shown = false;
+    bool estop_view = estop_local || (vs->control_authority == AUTHV_ESTOP);
+    if (estop_view) {
+        if (!s_banner_shown) {
+            lcd_draw_estop_banner(tft);
+            s_banner_shown = true;
+        }
+        return;   // 急停期間不刷新其他欄位
+    }
+    if (s_banner_shown) {
+        lcd_draw_static(tft);   // 解除後重建靜態框架，再往下畫動態欄位
+        s_banner_shown = false;
+    }
 
     // ── Header: control-authority badge (dot) ─────────────────────────────────
     // 0=none(gray) 1=pending(yellow) 2=granted(green) 3=denied(red)
     uint16_t auth_color;
     switch (vs->control_authority) {
-        case 2:  auth_color = C_GREEN;  break;
-        case 1:  auth_color = C_YELLOW; break;
-        case 3:  auth_color = C_RED;    break;
-        default: auth_color = C_GRAY;   break;
+        case AUTHV_GRANTED: auth_color = C_GREEN;  break;
+        case AUTHV_PENDING: auth_color = C_YELLOW; break;
+        case AUTHV_DENIED:  auth_color = C_RED;    break;
+        default:            auth_color = C_GRAY;   break;
     }
     tft->fillCircle(308, 10, 6, auth_color);
 
@@ -228,18 +281,32 @@ inline void lcd_update_dynamic(Adafruit_ILI9341* tft,
         draw_small_ascii(tft, 80, 100, buf, fix_color, C_BG);
     }
 
-    // Row 5: Mode
-    tft->fillRect(45, 120, 110, 16, C_BG);
-    draw_utf8_string(tft, 45, 120, ch_mode_str(vs->mode), C_CYAN, C_BG);
+    // Row 5: Mode — vessel's actual mode, plus what the switch is asking for
+    // when the two disagree. A mode switch that hasn't taken effect (refused
+    // for lack of a heading source, or lost in transit) must be visible: the
+    // operator is about to steer on the assumption that it did.
+    tft->fillRect(45, 120, 113, 16, C_BG);
+    bool is_acro   = (vs->mode == MODE_ACRO);
+    bool mismatch  = (mode_sw_acro != is_acro);
+    draw_utf8_string(tft, 45, 120, ch_mode_str(vs->mode),
+                     mismatch ? C_WHITE : (is_acro ? C_GREEN : C_CYAN), C_BG);
+    if (mismatch) {
+        draw_small_ascii(tft, 80, 124, "->", C_RED, C_BG);
+        draw_utf8_string(tft, 96, 120, mode_sw_acro ? "定向" : "手動", C_RED, C_BG);
+    }
 
     // Row 6: Comms — vessel (remote) IP:Port
     tft->fillRect(45, 144, 113, 16, C_BG);
     snprintf(buf, sizeof(buf), "%s:%u", vs->remote_ip, vs->remote_port);
     draw_small_ascii(tft, 45, 148, buf, C_WHITE, C_BG);
 
-    // Row 7: Engine Switch
-    tft->fillRect(45, 168, 110, 16, C_BG);
-    draw_utf8_string(tft, 45, 168, vs->armed ? "啟動" : "關閉", vs->armed ? C_GREEN : C_RED, C_BG);
+    // Row 7: Engine — 左右引擎閘門狀態（遙控器端），右側小圓點為船端實際 ARM 狀態
+    tft->fillRect(45, 168, 113, 16, C_BG);
+    draw_utf8_string(tft,  45, 168, "左", C_GRAY, C_BG);
+    draw_utf8_string(tft,  61, 168, l_eng_on ? "開" : "關", l_eng_on ? C_GREEN : C_RED, C_BG);
+    draw_utf8_string(tft,  85, 168, "右", C_GRAY, C_BG);
+    draw_utf8_string(tft, 101, 168, r_eng_on ? "開" : "關", r_eng_on ? C_GREEN : C_RED, C_BG);
+    tft->fillCircle(146, 176, 5, vs->armed ? C_GREEN : C_RED);
 
     // Row 8: Local (MPU) IP:Port
     tft->fillRect(45, 192, 113, 16, C_BG);

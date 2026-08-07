@@ -37,10 +37,19 @@ from pymavlink import mavutil
 
 logger = logging.getLogger(__name__)
 
-# ArduPilot Rover/Boat custom modes (matches USV Set_Mode ControlType)
+# ArduPilot Rover/Boat custom modes (matches USV Set_Mode ControlType).
+# This controller only ever commands MANUAL and ACRO — without a chart there is
+# no way to set waypoints, so the waypoint-driven modes have no operator
+# interface. The rest are kept for decoding whatever the vessel reports.
 MODE_MANUAL = 0
+MODE_ACRO   = 1     # 定向：CH1 = 轉向速率，回中時船端鎖定當前航向
+MODE_HOLD   = 4
+MODE_AUTO   = 10
 MODE_RTL    = 11
 MODE_GUIDED = 15
+
+# Modes this controller is allowed to command
+SELECTABLE_MODES = (MODE_MANUAL, MODE_ACRO)
 
 CONTROL_FAILSAFE_S = 1.0   # seconds without control → send neutral
 
@@ -112,6 +121,18 @@ class MAVLinkHandler:
         self.control_authority:       str  = "none"
         self._pending_control_request: bool = False
 
+        # Per-engine gates driven by the hardware toggle switches.
+        # Applied inside send_rc_override() so *every* control path — hardware
+        # levers and web sliders alike — is gated. A closed gate pins that
+        # side's channel to 1500 regardless of the requested throttle.
+        self.engine_l_on: bool = False
+        self.engine_r_on: bool = False
+
+        # Mode the operator's physical switch is asking for. ARM re-asserts this
+        # rather than a hard-coded MANUAL — otherwise arming while the switch is
+        # set to 定向 would silently drop the vessel back into 手動.
+        self.desired_mode: int = MODE_MANUAL
+
     def _build_conn_str(self) -> str:
         """Build pymavlink connection string from current config."""
         if self.protocol == "tcp":
@@ -155,7 +176,14 @@ class MAVLinkHandler:
     def disconnect(self):
         self._running = False
         if self._conn:
-            self._conn.close()
+            try:
+                self._conn.close()
+            except Exception as exc:
+                logger.error("Socket close failed: %s", exc)
+        # Drop the reference so every send_* method's `if not self._conn` guard
+        # takes effect — otherwise they keep writing to a closed socket.
+        self._conn = None
+        self._last_hb_time = 0.0   # link_quality() → 0
 
     def reconnect(self, protocol: str, remote_ip: str, remote_port: int, local_port: int):
         """Stop current connection and restart with new settings."""
@@ -201,6 +229,11 @@ class MAVLinkHandler:
 
         Values are cached so _control_loop can re-send at 10 Hz without
         requiring a new MCU input — mirrors C# SendTimer_Tick behaviour.
+
+        Per-engine gates (engine_l_on / engine_r_on) are applied here: a side
+        whose hardware switch is OFF is pinned to 1500 no matter what throttle
+        was requested. Gating at this single choke point means web sliders are
+        subject to the physical switches too.
         """
         if not self._conn:
             return
@@ -208,8 +241,8 @@ class MAVLinkHandler:
         # Map steering -1000…+1000  →  1000…2000 μs
         ch1 = int(1500 + steering / 2)
         ch1 = max(1000, min(2000, ch1))
-        ch3 = max(1000, min(2000, left_thr))
-        ch4 = max(1000, min(2000, right_thr))
+        ch3 = max(1000, min(2000, left_thr))  if self.engine_l_on else 1500
+        ch4 = max(1000, min(2000, right_thr)) if self.engine_r_on else 1500
 
         # Cache for continuous re-send by _control_loop
         self._rc_ch1 = ch1
@@ -219,6 +252,38 @@ class MAVLinkHandler:
         self._last_control_time = time.time()
         self.in_failsafe = False
 
+    def set_mode(self, custom_mode: int) -> bool:
+        """Command a flight mode, restricted to the two the controller offers.
+
+        Rejecting anything outside SELECTABLE_MODES here means a stale web
+        client or a malformed message cannot put the vessel into a waypoint
+        mode that this controller has no interface to steer out of.
+        """
+        if custom_mode not in SELECTABLE_MODES:
+            logger.warning("Refusing unsupported mode %s (allowed: %s)",
+                           custom_mode, SELECTABLE_MODES)
+            return False
+        if not self._conn:
+            return False
+        self.desired_mode = custom_mode
+        logger.info("Sending SET_MODE(%d)", custom_mode)
+        self._send_set_mode(custom_mode)
+        return True
+
+    def set_engine_gates(self, left_on: bool, right_on: bool):
+        """Update the per-engine throttle gates from the hardware toggle switches.
+
+        Closing a gate immediately neutralises that side's cached channel so the
+        10 Hz _control_loop stops re-sending the old throttle — without this the
+        engine would keep running until the next send_rc_override() call.
+        """
+        self.engine_l_on = bool(left_on)
+        self.engine_r_on = bool(right_on)
+        if not self.engine_l_on:
+            self._rc_ch3 = 1500
+        if not self.engine_r_on:
+            self._rc_ch4 = 1500
+
     def send_arm(self):
         """Set MANUAL mode then ARM — runs in background thread to avoid blocking Bridge callback."""
         if not self._conn:
@@ -226,8 +291,8 @@ class MAVLinkHandler:
         threading.Thread(target=self._send_arm_async, daemon=True, name="mav-arm").start()
 
     def _send_arm_async(self):
-        logger.info("Sending SET_MODE(MANUAL) + ARM")
-        self._send_set_mode(MODE_MANUAL)
+        logger.info("Sending SET_MODE(%d) + ARM", self.desired_mode)
+        self._send_set_mode(self.desired_mode)
         time.sleep(0.15)
         with self._send_lock:
             self._conn.mav.command_long_send(
@@ -300,6 +365,76 @@ class MAVLinkHandler:
                 65535, 65535, 65535, 65535,
                 65535, 65535,
             )
+
+    def emergency_stop(self):
+        """Emergency stop — neutralise, disarm, release control, then cut the link.
+
+        Order matters: once the socket is closed nothing more can be sent, so
+        every stop command must go out first. The neutral override is repeated
+        because UDP gives no delivery guarantee and this is the one packet that
+        must not be lost.
+
+        Cutting the link is itself the strongest failsafe — with no further
+        control packets the USV's own ControlFailsafeTimeoutMs elapses and the
+        ship neutralises its thrusters independently of anything we send.
+
+        Each step is isolated: a failure part-way through must not prevent the
+        disconnect that follows.
+        """
+        logger.critical("EMERGENCY STOP — neutralising, disarming, cutting link")
+
+        self.engine_l_on = False
+        self.engine_r_on = False
+        self._rc_ch1 = 1500
+        self._rc_ch3 = 1500
+        self._rc_ch4 = 1500
+
+        for attempt in range(3):
+            try:
+                self.send_safe_state()
+            except Exception as exc:
+                logger.error("E-STOP neutral send %d failed: %s", attempt + 1, exc)
+            time.sleep(0.05)
+
+        try:
+            self.send_disarm()
+        except Exception as exc:
+            logger.error("E-STOP disarm failed: %s", exc)
+
+        try:
+            self.send_request_operator_control(request=False)
+        except Exception as exc:
+            logger.error("E-STOP control release failed: %s", exc)
+
+        self.disconnect()
+
+        # No ACK can arrive once the socket is gone — settle the state locally
+        # rather than leaving control_authority stuck at "pending".
+        self.control_authority        = "none"
+        self._pending_control_request = False
+        self.in_failsafe              = True
+        logger.critical("EMERGENCY STOP complete — link is down")
+
+    def resume_from_estop(self) -> bool:
+        """Re-establish the link after an emergency stop has been cleared.
+
+        Returns to a cold state: no control authority, neutral channels. The
+        operator must re-acquire control deliberately — clearing an E-STOP is
+        not the same as being authorised to drive again.
+        """
+        logger.warning("E-STOP cleared — reconnecting")
+        self.control_authority        = "none"
+        self._pending_control_request = False
+        self._last_hb_time            = 0.0
+        self._last_control_time       = 0.0
+        self._last_send_time          = 0.0
+        self.in_failsafe              = False
+        self.tx_count                 = 0
+        self.rx_count                 = 0
+        self._rc_ch1 = 1500
+        self._rc_ch3 = 1500
+        self._rc_ch4 = 1500
+        return self.connect()
 
     def link_quality(self) -> int:
         """Returns 0–100 based on received heartbeat recency.

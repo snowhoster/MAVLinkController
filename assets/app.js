@@ -9,8 +9,12 @@ const ROVER_MODES = {
 };
 
 const GPS_FIX = ['無定位', '無定位', '2D 定位', '3D 定位', '3D DGPS', 'RTK 浮動', 'RTK 固定'];
-const MODE_MAP = { manual: 0, guided: 15, rtl: 11 };
-const MODE_TO_KEY = { 0: 'manual', 15: 'guided', 11: 'rtl' };
+
+// Only two modes are selectable, and only from the controller's D6 switch.
+// Without a chart there is no way to place waypoints, so AUTO/GUIDED/RTL have
+// no operator interface here — they are decoded for display only.
+const MODE_MANUAL = 0;
+const MODE_ACRO = 1;
 
 const ctrl = { steering: 0, left_thr: 1500, right_thr: 1500 };
 let webCtrlEnabled = false;
@@ -129,6 +133,12 @@ socket.on('state', (d) => {
   if (d.inputs) updateInputs(d.inputs);
   if (d.comms) updateComms(d.comms);
   if (d.telemetry) updateTelemetry(d.telemetry);
+  // Needs both blocks: the vessel's mode lives in telemetry, the switch
+  // position in comms.
+  if (d.telemetry && d.comms) {
+    updateModeReadout(d.telemetry.mode, Boolean(d.comms.mode_sw_acro),
+                      Boolean(d.comms.mode_denied));
+  }
   if (d.leds) updateLeds(d.leds);
 });
 
@@ -197,7 +207,7 @@ function updateConnectionUI({ protocol, remote_ip, remote_port, local_ip, local_
   refreshFooterStatus();
 }
 
-function updateInputs({ steering, left_thr, right_thr, sw_state }) {
+function updateInputs({ steering, left_thr, right_thr, l_eng_on, r_eng_on }) {
   const angleDeg = 270 + (steering / 1000) * 90;
   const angle = angleDeg * Math.PI / 180;
   const radius = 63;
@@ -236,13 +246,18 @@ function updateInputs({ steering, left_thr, right_thr, sw_state }) {
   el('left-thr-val').textContent = `${left_thr} us`;
   el('right-thr-val').textContent = `${right_thr} us`;
 
-  const badge = el('engine-badge');
-  badge.textContent = sw_state ? 'ON' : 'OFF';
-  badge.className = `engine-badge ${sw_state ? 'on' : 'off'}`;
+  [['engine-l-badge', l_eng_on], ['engine-r-badge', r_eng_on]].forEach(([id, on]) => {
+    const badge = el(id);
+    badge.textContent = on ? 'ON' : 'OFF';
+    badge.className = `engine-badge ${on ? 'on' : 'off'}`;
+  });
 }
 
 function updateComms({ link_quality, hb_age_s, in_failsafe, tx_count, rx_count,
-                       control_authority, source_system }) {
+                       control_authority, source_system,
+                       estop_latched, estop_active }) {
+  updateEstop(Boolean(estop_latched), Boolean(estop_active));
+
   const lq = clamp(link_quality || 0, 0, 100);
   el('lq-bar').style.width = `${lq}%`;
   el('lq-val').textContent = lq;
@@ -272,14 +287,16 @@ function updateComms({ link_quality, hb_age_s, in_failsafe, tx_count, rx_count,
   el('rx-count').textContent = rx.toLocaleString();
   el('comm-stats').textContent = `接收: ${rx} | 發送: ${tx} | 延遲: ${connected ? '1' : '--'} ms`;
 
-  // Control authority status
+  // Control authority status — the E-STOP latch outranks any authority state
   const AUTH = {
     granted: { text: '✓ 已取得控制權',       cls: 'auth-granted' },
     pending: { text: '⏳ 請求中… (等待 ACK)', cls: 'auth-pending' },
     denied:  { text: '✗ 請求被拒絕',          cls: 'auth-denied'  },
     none:    { text: '— 未請求控制權 —',       cls: 'auth-none'    },
   };
-  const a = AUTH[control_authority] || AUTH.none;
+  const a = estop_latched
+    ? { text: '⛔ 緊急停止中 — 通訊已切斷', cls: 'auth-denied' }
+    : (AUTH[control_authority] || AUTH.none);
   const authEl = el('auth-status');
   authEl.textContent = a.text;
   authEl.className = `auth-status ${a.cls}`;
@@ -290,25 +307,54 @@ function updateComms({ link_quality, hb_age_s, in_failsafe, tx_count, rx_count,
   }
 }
 
+// Show the E-STOP overlay while latched, and report whether the physical
+// button has been reset — step 2 of the clear procedure the overlay lists.
+function updateEstop(latched, active) {
+  el('estop-overlay').classList.toggle('hidden', !latched);
+  if (!latched) return;
+  const state = el('estop-btn-state');
+  state.textContent = active ? '實體按鈕：尚未復位' : '實體按鈕：已復位 — 可長按控制權按鈕解除';
+  state.className = `estop-btn-state ${active ? '' : 'ready'}`;
+}
+
 function updateArmBtn(armed) {
   const badge = el('arm-badge');
   badge.textContent = armed ? '⚡ ARMED' : '⚡ DISARMED';
   badge.className = `arm-badge ${armed ? 'armed' : 'disarmed'}`;
 }
 
-function updateModeButtons(mode) {
-  ['manual', 'guided', 'rtl'].forEach((name) => {
-    el(`mode-${name}-btn`).className = 'btn-mode';
-  });
+// Read-only mode indicator. `mode` is what the vessel reports; swAcro is where
+// the D6 switch sits. When they disagree the requested mode has not taken
+// effect — the operator needs to see that before steering on the assumption
+// that it did.
+function updateModeReadout(mode, swAcro, denied) {
+  const isAcro = mode === MODE_ACRO;
+  const isManual = mode === MODE_MANUAL;
+  el('mode-ro-manual').className = `mode-slot ${isManual ? 'active' : ''}`;
+  el('mode-ro-acro').className = `mode-slot ${isAcro ? 'active' : ''}`;
 
-  const active = MODE_TO_KEY[mode];
-  const headerBadge = el('mode-badge');
-  if (active) {
-    el(`mode-${active}-btn`).className = `btn-mode active-${active}`;
-    headerBadge.textContent = (ROVER_MODES[mode] || active).toUpperCase();
-    headerBadge.className = `mode-badge ${active}`;
+  const note = el('mode-note');
+  if (denied) {
+    note.textContent = '⚠ 定向已拒絕／退回手動 — 定位訊號不足，無可靠航向源';
+    note.className = 'mode-note warn';
+  } else if (swAcro !== isAcro) {
+    note.textContent = `⚠ 開關要求「${swAcro ? '定向' : '手動'}」，船端尚未生效`;
+    note.className = 'mode-note warn';
   } else {
-    headerBadge.textContent = mode === undefined || mode === null || mode < 0 ? 'LOCKED' : (ROVER_MODES[mode] || `MODE ${mode}`);
+    note.className = 'mode-note hidden';
+  }
+
+  const headerBadge = el('mode-badge');
+  if (mode === undefined || mode === null || mode < 0) {
+    headerBadge.textContent = 'LOCKED';
+    headerBadge.className = 'mode-badge locked';
+  } else if (isManual || isAcro) {
+    headerBadge.textContent = isAcro ? 'ACRO 定向' : 'MANUAL 手動';
+    headerBadge.className = `mode-badge ${isAcro ? 'acro' : 'manual'}`;
+  } else {
+    // A mode we never command — the vessel changed it on its own (failsafe,
+    // GCS elsewhere). Show it plainly rather than pretending it is one of ours.
+    headerBadge.textContent = ROVER_MODES[mode] || `MODE ${mode}`;
     headerBadge.className = 'mode-badge locked';
   }
 }
@@ -344,7 +390,6 @@ function updateTelemetry({ speed_kn, speed_ms, battery_pct, voltage_v,
   el('servo4-raw').textContent = `${servo4_raw ?? 1500} us`;
 
   updateArmBtn(Boolean(armed));
-  updateModeButtons(mode);
 
   // Toggle vessel hull armed state
   const hull = el('web-vessel-hull');
@@ -435,16 +480,12 @@ el('web-disarm-btn').addEventListener('click', () => {
   if (webCtrlEnabled) socket.emit('control', { ...ctrl, steering: 0, left_thr: 1500, right_thr: 1500 });
 });
 
-['manual', 'guided', 'rtl'].forEach((name) => {
-  el(`mode-${name}-btn`).addEventListener('click', () => {
-    socket.emit('set_mode', { mode: MODE_MAP[name] });
-  });
-});
+// No mode-change listeners: mode is owned by the controller's D6 switch.
 
 resetThrottleControls();
 setSteeringControl(1500, false);
 updateArmBtn(false);
-updateModeButtons(-1);
+updateModeReadout(-1, false, false);
 refreshFooterStatus();
 
 // ── Operator Control ────────────────────────────────────────────────────────
