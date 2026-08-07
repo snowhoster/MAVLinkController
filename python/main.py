@@ -641,6 +641,7 @@ def loop():
             # 13. 控制權狀態 (header badge) — 急停閂鎖覆蓋一切，並讓 LCD 保持
             #     急停橫幅（實體按鈕已復位但尚未解除閂鎖時仍需顯示）
             _AUTH_ESTOP if _estop_latched else _AUTH_CODE.get(mavlink.control_authority, 0),
+            int(lq > 0),                    # 14. MAVLink 連線狀態 (0=斷線 1=已連線)
         )
 
         # Push full state to web browser

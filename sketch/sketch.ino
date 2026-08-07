@@ -127,7 +127,7 @@ void update_display(int speed_x10, int heading, int bat, int fix, int armed, int
                     int32_t lat_e7, int32_t lon_e7,
                     String remote_ip, int remote_port,
                     String local_ip, int local_port,
-                    int control_authority) {
+                    int control_authority, int link_ok) {
     g_vessel.speed_x10   = (uint16_t)speed_x10;
     g_vessel.heading     = (uint16_t)heading;
     g_vessel.battery_pct = (uint8_t)bat;
@@ -143,6 +143,7 @@ void update_display(int speed_x10, int heading, int bat, int fix, int armed, int
     g_vessel.local_ip[sizeof(g_vessel.local_ip) - 1] = '\0';
     g_vessel.local_port  = (uint16_t)local_port;
     g_vessel.control_authority = (uint8_t)control_authority;
+    g_vessel.link_ok     = (bool)link_ok;   // MAVLink RX link status — drives "斷線" indicator
 }
 
 // ── Setup ─────────────────────────────────────────────────────────────────────

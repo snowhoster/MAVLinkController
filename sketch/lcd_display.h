@@ -48,6 +48,7 @@ struct VesselStatus {
     char     local_ip[16];  // 本機 (MPU) IP
     uint16_t local_port;
     uint8_t  control_authority; // 0=none 1=pending 2=granted 3=denied 4=estop-latched
+    bool     link_ok;      // MAVLink RX link status (link_quality() > 0 on the MPU side)
 };
 
 // control_authority 代碼（須與 sketch.ino / Python _AUTH_CODE 一致）
@@ -295,10 +296,14 @@ inline void lcd_update_dynamic(Adafruit_ILI9341* tft,
         draw_utf8_string(tft, 96, 120, mode_sw_acro ? "定向" : "手動", C_RED, C_BG);
     }
 
-    // Row 6: Comms — vessel (remote) IP:Port
+    // Row 6: Comms — vessel (remote) IP:Port, colored/labelled by MAVLink link status
     tft->fillRect(45, 144, 113, 16, C_BG);
-    snprintf(buf, sizeof(buf), "%s:%u", vs->remote_ip, vs->remote_port);
-    draw_small_ascii(tft, 45, 148, buf, C_WHITE, C_BG);
+    if (vs->link_ok) {
+        snprintf(buf, sizeof(buf), "%s:%u", vs->remote_ip, vs->remote_port);
+        draw_small_ascii(tft, 45, 148, buf, C_WHITE, C_BG);
+    } else {
+        draw_utf8_string(tft, 45, 144, "斷線", C_RED, C_BG);
+    }
 
     // Row 7: Engine — 左右引擎閘門狀態（遙控器端），右側小圓點為船端實際 ARM 狀態
     tft->fillRect(45, 168, 113, 16, C_BG);
