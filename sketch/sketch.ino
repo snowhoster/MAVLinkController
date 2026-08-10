@@ -22,8 +22,8 @@
                             // 撥上(LOW) = 定向 ACRO；撥下(HIGH) = 手動 MANUAL
 
 #define TFT_CS    10
-#define TFT_DC     9
-#define TFT_RST    8
+#define TFT_DC     8
+#define TFT_RST    9
 
 // Switch edge codes (must match Python constants)
 #define EDGE_NONE    0

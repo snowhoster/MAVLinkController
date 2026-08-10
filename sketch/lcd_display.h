@@ -164,6 +164,7 @@ inline void lcd_init(Adafruit_ILI9341* tft, uint32_t spi_hz = 8000000) {
 }
 
 inline void lcd_draw_static(Adafruit_ILI9341* tft) {
+    tft->fillScreen(C_BG);
     // Header bar
     tft->fillRect(0, 0, 320, 20, C_HEADER);
     draw_utf8_string(tft, 80, 2, "無人船遠端遙控器", C_CYAN, C_HEADER);
