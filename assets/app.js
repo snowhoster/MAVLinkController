@@ -137,7 +137,7 @@ socket.on('state', (d) => {
   // position in comms.
   if (d.telemetry && d.comms) {
     updateModeReadout(d.telemetry.mode, Boolean(d.comms.mode_sw_acro),
-                      Boolean(d.comms.mode_denied));
+                      Boolean(d.comms.mode_denied), Boolean(d.comms.resume_interlock));
   }
   if (d.leds) updateLeds(d.leds);
 });
@@ -327,18 +327,24 @@ function updateArmBtn(armed) {
 // the D6 switch sits. When they disagree the requested mode has not taken
 // effect — the operator needs to see that before steering on the assumption
 // that it did.
-function updateModeReadout(mode, swAcro, denied) {
+function updateModeReadout(mode, swAcro, denied, interlock) {
   const isAcro = mode === MODE_ACRO;
   const isManual = mode === MODE_MANUAL;
   el('mode-ro-manual').className = `mode-slot ${isManual ? 'active' : ''}`;
   el('mode-ro-acro').className = `mode-slot ${isAcro ? 'active' : ''}`;
 
+  // Compare against the requested mode rather than just "is it ACRO", so a
+  // vessel that moved to HOLD/RTL by itself is flagged too.
+  const wantMode = swAcro ? MODE_ACRO : MODE_MANUAL;
   const note = el('mode-note');
-  if (denied) {
+  if (interlock) {
+    note.textContent = '⚠ 急停解除中 — 請將油門推桿歸中立、引擎開關關閉後才會恢復控制';
+    note.className = 'mode-note warn';
+  } else if (denied) {
     note.textContent = '⚠ 定向已拒絕／退回手動 — 定位訊號不足，無可靠航向源';
     note.className = 'mode-note warn';
-  } else if (swAcro !== isAcro) {
-    note.textContent = `⚠ 開關要求「${swAcro ? '定向' : '手動'}」，船端尚未生效`;
+  } else if (mode !== wantMode) {
+    note.textContent = `⚠ 開關要求「${swAcro ? '定向' : '手動'}」，船端目前為 ${ROVER_MODES[mode] || mode}`;
     note.className = 'mode-note warn';
   } else {
     note.className = 'mode-note hidden';
@@ -485,7 +491,7 @@ el('web-disarm-btn').addEventListener('click', () => {
 resetThrottleControls();
 setSteeringControl(1500, false);
 updateArmBtn(false);
-updateModeReadout(-1, false, false);
+updateModeReadout(-1, false, false, false);
 refreshFooterStatus();
 
 // ── Operator Control ────────────────────────────────────────────────────────

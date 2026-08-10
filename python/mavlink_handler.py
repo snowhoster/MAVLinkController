@@ -78,6 +78,7 @@ class MAVLinkHandler:
         self._conn: Optional[mavutil.mavudp] = None
         self._send_lock  = threading.Lock()
         self._running    = False
+        self._threads: list = []   # rx/hb/control workers, joined on disconnect
 
         # ── Telemetry (updated by RX thread) ───────────────────────────────
         self.speed_knots:    float = 0.0   # groundspeed converted to kn
@@ -167,14 +168,30 @@ class MAVLinkHandler:
             logger.info("Pre-added remote client: %s:%s", self.remote_ip, self.remote_port)
 
         self._running = True
-        threading.Thread(target=self._rx_loop,        daemon=True, name="mav-rx").start()
-        threading.Thread(target=self._heartbeat_loop, daemon=True, name="mav-hb").start()
-        threading.Thread(target=self._control_loop,   daemon=True, name="mav-ctrl").start()
+        self._threads = []
+        for target, name in ((self._rx_loop,        "mav-rx"),
+                             (self._heartbeat_loop, "mav-hb"),
+                             (self._control_loop,   "mav-ctrl")):
+            t = threading.Thread(target=target, daemon=True, name=name)
+            t.start()
+            self._threads.append(t)
         logger.info("MAVLink handler running  conn_str=%s", conn_str)
         return True
 
     def disconnect(self):
+        """Stop the worker threads and drop the socket.
+
+        Joins the workers rather than just clearing the flag: the heartbeat loop
+        sleeps a full second between beats, so a reconnect that does not wait
+        would set _running back to True while the old loop is still sleeping,
+        and it would then carry on — two threads streaming RC at once.
+        """
         self._running = False
+        for t in self._threads:
+            if t is not threading.current_thread():
+                t.join(timeout=1.5)   # rx blocks ≤0.5 s, hb ≤1.0 s, ctrl ≤0.1 s
+        self._threads = []
+
         if self._conn:
             try:
                 self._conn.close()
@@ -190,14 +207,10 @@ class MAVLinkHandler:
         logger.info("Reconnecting  %s:%s (local:%s) → %s:%s (local:%s)",
                     self.remote_ip, self.remote_port, self.local_port,
                     remote_ip, remote_port, local_port)
-        self._running = False
-        if self._conn:
-            try:
-                self._conn.close()
-            except Exception:
-                pass
-            self._conn = None
-        time.sleep(0.4)   # wait for background threads to exit
+        # disconnect() joins the workers, which is stricter than the fixed sleep
+        # this used to use — 0.4 s was shorter than the heartbeat loop's own
+        # 1 s sleep, so that thread could outlive the reconnect.
+        self.disconnect()
 
         self.protocol    = protocol
         self.remote_ip   = remote_ip
@@ -212,6 +225,30 @@ class MAVLinkHandler:
         self.tx_count           = 0
         self.rx_count           = 0
         self.connect()
+
+    # ── Send helper ───────────────────────────────────────────────────────────
+
+    def _send(self, method: str, *args) -> bool:
+        """Send one MAVLink message, tolerating a concurrent disconnect.
+
+        Every caller would otherwise have to check self._conn and then use it,
+        and disconnect() can null the reference or close the socket in between —
+        E-STOP does exactly that, and an unguarded dereference there raises
+        AttributeError on a daemon thread and silently kills it.
+
+        Returns True if the message went out.
+        """
+        conn = self._conn            # single read; disconnect() may null it next
+        if conn is None:
+            return False
+        try:
+            with self._send_lock:
+                getattr(conn.mav, method)(*args)
+            return True
+        except Exception as exc:
+            # Expected when the socket closes mid-send (E-STOP, reconnect).
+            logger.debug("Send %s dropped: %s", method, exc)
+            return False
 
     # ── Control commands ──────────────────────────────────────────────────────
 
@@ -294,26 +331,22 @@ class MAVLinkHandler:
         logger.info("Sending SET_MODE(%d) + ARM", self.desired_mode)
         self._send_set_mode(self.desired_mode)
         time.sleep(0.15)
-        with self._send_lock:
-            self._conn.mav.command_long_send(
-                self.target_system, self.target_component,
-                mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM,
-                0,      # confirmation
-                1.0,    # param1: 1 = ARM
-                0, 0, 0, 0, 0, 0,
-            )
+        # The socket may have been torn down during that sleep (E-STOP), so this
+        # must go through _send() rather than dereferencing self._conn directly.
+        self._send("command_long_send",
+                   self.target_system, self.target_component,
+                   mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM,
+                   0,      # confirmation
+                   1.0,    # param1: 1 = ARM
+                   0, 0, 0, 0, 0, 0)
 
     def send_disarm(self):
         """DISARM (MAV_CMD_COMPONENT_ARM_DISARM = 400, param1=0)."""
-        if not self._conn:
-            return
         logger.info("Sending DISARM")
-        with self._send_lock:
-            self._conn.mav.command_long_send(
-                self.target_system, self.target_component,
-                mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM,
-                0, 0.0, 0, 0, 0, 0, 0, 0,
-            )
+        self._send("command_long_send",
+                   self.target_system, self.target_component,
+                   mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM,
+                   0, 0.0, 0, 0, 0, 0, 0, 0)
 
     def set_source_system(self, sysid: int):
         """Update the GCS source system ID used in all outgoing MAVLink messages."""
@@ -337,34 +370,28 @@ class MAVLinkHandler:
         self.control_authority = "pending"
         logger.info("Sending REQUEST_OPERATOR_CONTROL request=%s (sysid=%s)",
                     request, self.source_system)
-        with self._send_lock:
-            self._conn.mav.command_long_send(
-                self.target_system, self.target_component,
-                410,    # MAV_CMD_REQUEST_OPERATOR_CONTROL
-                0,      # confirmation
-                float(self.source_system),    # param1: requesting GCS system ID
-                1.0 if request else 0.0,      # param2: 1=request, 0=release
-                0, 0, 0, 0, 0,
-            )
-        self.tx_count += 1
+        if self._send("command_long_send",
+                      self.target_system, self.target_component,
+                      410,    # MAV_CMD_REQUEST_OPERATOR_CONTROL
+                      0,      # confirmation
+                      float(self.source_system),    # param1: requesting GCS system ID
+                      1.0 if request else 0.0,      # param2: 1=request, 0=release
+                      0, 0, 0, 0, 0):
+            self.tx_count += 1
 
     def send_safe_state(self):
         """Send neutral RC override (CH1/3/4 = 1500) to stop USV and reset cache."""
-        if not self._conn:
-            return
         logger.warning("Failsafe: sending neutral RC override (1500/1500/1500)")
         self._rc_ch1 = 1500
         self._rc_ch3 = 1500
         self._rc_ch4 = 1500
-        with self._send_lock:
-            self._conn.mav.rc_channels_override_send(
-                self.target_system, self.target_component,
-                1500, 65535, 1500, 1500,
-                65535, 65535, 65535, 65535,
-                65535, 65535, 65535, 65535,
-                65535, 65535, 65535, 65535,
-                65535, 65535,
-            )
+        self._send("rc_channels_override_send",
+                   self.target_system, self.target_component,
+                   1500, 65535, 1500, 1500,
+                   65535, 65535, 65535, 65535,
+                   65535, 65535, 65535, 65535,
+                   65535, 65535, 65535, 65535,
+                   65535, 65535)
 
     def emergency_stop(self):
         """Emergency stop — neutralise, disarm, release control, then cut the link.
@@ -423,6 +450,8 @@ class MAVLinkHandler:
         not the same as being authorised to drive again.
         """
         logger.warning("E-STOP cleared — reconnecting")
+        # disconnect() joins the workers, so by the time we get here the old
+        # rx/hb/control trio is gone and connect() cannot end up with two sets.
         self.control_authority        = "none"
         self._pending_control_request = False
         self._last_hb_time            = 0.0
@@ -465,15 +494,13 @@ class MAVLinkHandler:
 
     def _send_set_mode(self, custom_mode: int):
         """MAV_CMD_DO_SET_MODE (cmd=176) as used by USV driver Set_Mode."""
-        with self._send_lock:
-            self._conn.mav.command_long_send(
-                self.target_system, self.target_component,
-                176,    # MAV_CMD_DO_SET_MODE
-                0,
-                1.0,    # param1: MAV_MODE_FLAG_CUSTOM_MODE_ENABLED
-                float(custom_mode),
-                0, 0, 0, 0, 0,
-            )
+        self._send("command_long_send",
+                   self.target_system, self.target_component,
+                   176,    # MAV_CMD_DO_SET_MODE
+                   0,
+                   1.0,    # param1: MAV_MODE_FLAG_CUSTOM_MODE_ENABLED
+                   float(custom_mode),
+                   0, 0, 0, 0, 0)
 
     # ── Background threads ────────────────────────────────────────────────────
 
@@ -485,20 +512,22 @@ class MAVLinkHandler:
         reference behavior where heartbeat carries _isArmed and _currentCustomMode.
         """
         while self._running:
-            if self._conn:
-                base_mode      = 0x80 if self.armed else 0
-                system_status  = 4 if self.armed else 3  # MAV_STATE_ACTIVE=4, MAV_STATE_STANDBY=3
-                with self._send_lock:
-                    self._conn.mav.heartbeat_send(
-                        mavutil.mavlink.MAV_TYPE_GCS,
-                        mavutil.mavlink.MAV_AUTOPILOT_INVALID,
-                        base_mode,
-                        self.mode,
-                        system_status,
-                    )
+            base_mode     = 0x80 if self.armed else 0
+            system_status = 4 if self.armed else 3  # MAV_STATE_ACTIVE=4, MAV_STATE_STANDBY=3
+            if self._send("heartbeat_send",
+                          mavutil.mavlink.MAV_TYPE_GCS,
+                          mavutil.mavlink.MAV_AUTOPILOT_INVALID,
+                          base_mode,
+                          self.mode,
+                          system_status):
                 self._last_send_time = time.time()
                 self.tx_count += 1
-            time.sleep(1.0)
+            # Wake often enough that disconnect() does not have to wait a full
+            # second for this thread to notice _running went false.
+            for _ in range(10):
+                if not self._running:
+                    return
+                time.sleep(0.1)
 
     def _control_loop(self):
         """
@@ -519,29 +548,25 @@ class MAVLinkHandler:
                 if not self.in_failsafe:
                     logger.warning("Failsafe: sending neutral RC (1500/1500/1500)")
                     self.in_failsafe = True
-                with self._send_lock:
-                    self._conn.mav.rc_channels_override_send(
-                        self.target_system, self.target_component,
-                        1500, 65535, 1500, 1500,
-                        65535, 65535, 65535, 65535,
-                        65535, 65535, 65535, 65535,
-                        65535, 65535, 65535, 65535,
-                        65535, 65535,
-                    )
+                if self._send("rc_channels_override_send",
+                              self.target_system, self.target_component,
+                              1500, 65535, 1500, 1500,
+                              65535, 65535, 65535, 65535,
+                              65535, 65535, 65535, 65535,
+                              65535, 65535, 65535, 65535,
+                              65535, 65535):
+                    self.tx_count += 1
                 self._last_control_time = now  # avoid repeat spam
-                self.tx_count += 1
             else:
                 # Continuously re-send the last known RC values
-                with self._send_lock:
-                    self._conn.mav.rc_channels_override_send(
-                        self.target_system, self.target_component,
-                        self._rc_ch1, 65535, self._rc_ch3, self._rc_ch4,
-                        65535, 65535, 65535, 65535,
-                        65535, 65535, 65535, 65535,
-                        65535, 65535, 65535, 65535,
-                        65535, 65535,
-                    )
-                self.tx_count += 1
+                if self._send("rc_channels_override_send",
+                              self.target_system, self.target_component,
+                              self._rc_ch1, 65535, self._rc_ch3, self._rc_ch4,
+                              65535, 65535, 65535, 65535,
+                              65535, 65535, 65535, 65535,
+                              65535, 65535, 65535, 65535,
+                              65535, 65535):
+                    self.tx_count += 1
 
     def _rx_loop(self):
         """Receive and parse MAVLink telemetry from USV."""

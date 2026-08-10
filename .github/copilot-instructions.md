@@ -57,6 +57,9 @@ When an MCU function receives `String` arguments from the MPU, the parameter typ
 ### Chinese glyphs must exist before use
 `draw_utf8_string()` **silently skips** characters absent from `chinese_fonts.h`, so a new UI string renders partially with no error. Check `get_char_index()` before adding Chinese text to the LCD.
 
+### All MAVLink sends go through `_send()`
+`MAVLinkHandler._send(method, *args)` is the only place that touches `self._conn.mav`. `disconnect()` (E-STOP, reconnect) nulls the socket from another thread, so a check-then-use elsewhere raises `AttributeError` on a daemon thread and kills it silently. `disconnect()` also **joins** the workers, so never restart them without going through it.
+
 ### Physical switches outrank the web UI
 Engine gating, mode selection and E-STOP clearing are owned by the hardware inputs. The web UI shows their state but cannot override them (`_handle_set_mode` refuses outright, `_blocked_by_estop()` guards the rest). Two authorities over one setting would fight, and the switch positions must stay honest indicators.
 

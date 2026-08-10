@@ -106,6 +106,11 @@ static uint8_t db_update(DebouncedInput* d, unsigned long now) {
 // 控制權按鈕手勢狀態
 unsigned long t_ctrl_press   = 0;
 bool          ctrl_long_sent = false;
+// The hold timer only arms once an actual press edge has been seen. Without
+// this, a button held (or D4 shorted) at power-up would satisfy
+// `now - t_ctrl_press >= CTRL_HOLD_MS` as soon as millis() passed 2000 and emit
+// a RELEASE_CONTROL nobody asked for.
+bool          ctrl_press_seen = false;
 
 // ── LED helpers ───────────────────────────────────────────────────────────────
 void set_led3_color(int r, int g, int b) {
@@ -198,13 +203,16 @@ void loop() {
     // 控制權按鈕：短按 = 請求，長按 CTRL_HOLD_MS = 釋放 / 解除急停
     uint8_t ctrl_edge = CTRL_NONE;
     if (ctrl_raw == EDGE_RISING) {          // 按下
-        t_ctrl_press   = now;
-        ctrl_long_sent = false;
+        t_ctrl_press    = now;
+        ctrl_long_sent  = false;
+        ctrl_press_seen = true;
     } else if (ctrl_raw == EDGE_FALLING) {  // 放開 — 長按已觸發過就不再算短按
-        if (!ctrl_long_sent) ctrl_edge = CTRL_SHORT;
+        if (ctrl_press_seen && !ctrl_long_sent) ctrl_edge = CTRL_SHORT;
+        ctrl_press_seen = false;
     }
     // 按住超過門檻時立即觸發長按，不等放開（操作者能從 LCD 得到即時回饋）
-    if (db_ctrl.stable && !ctrl_long_sent && (now - t_ctrl_press) >= CTRL_HOLD_MS) {
+    if (ctrl_press_seen && db_ctrl.stable && !ctrl_long_sent &&
+        (now - t_ctrl_press) >= CTRL_HOLD_MS) {
         ctrl_long_sent = true;
         ctrl_edge      = CTRL_LONG;
     }

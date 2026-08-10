@@ -127,8 +127,8 @@ Arduino D6 ──[模式開關]── GND
 | VCC     | 3.3V        | 電源 |
 | GND     | GND         | 接地 |
 | CS      | D10         | Chip Select |
-| DC/RS   | D9          | Data/Command |
-| RST     | D8          | Reset |
+| DC/RS   | D8          | Data/Command |
+| RST     | D9          | Reset |
 | MOSI    | D11 (MOSI)  | SPI 資料 |
 | SCK     | D13 (SCK)   | SPI 時脈 |
 | LED     | 3.3V（或 PWM 調光） | 背光 |
@@ -283,7 +283,10 @@ ACRO 依賴船端 EKF 的航向估計。若航向估計不可靠，船會鎖定�
 | `gps_fix < 2` 時撥到定向 | **拒絕**，改送 MANUAL，LCD 顯示 `手動 →定向`（紅字） |
 | 定向中 `gps_fix` 掉到 < 2 | **自動退回手動**，LCD 顯示不一致警告 |
 | 定位恢復（開關仍在定向） | 自動重試進入定向，**3 秒節流**避免臨界抖動反覆切換 |
-| 船端自行改模式（如船端 failsafe） | 不強制覆蓋，僅顯示——船端有它自己的理由 |
+| SET_MODE 遺失或被拒（船端仍在手動） | 持續重新宣告，直到船端模式與開關一致 |
+| 船端自行改模式（如船端 failsafe → HOLD/RTL） | **不強制覆蓋**，僅在 LCD 與網頁顯示不一致——船端有它自己的理由 |
+| ARM 時定位已失效 | ARM 前先把 `desired_mode` 降回手動，避免武裝進入無效的定向 |
+| 連線中斷 | 看門狗停止動作，不對著斷掉的鏈路重送 |
 
 `MIN_FIX_FOR_ACRO = 2` 定義於 `main.py`。GPS fix 是遙測能取得的最佳航向可靠度代理
 指標（真正的航向源是羅盤，但 2D fix 以上意味著 EKF 有可用的 yaw 估計）。
@@ -560,6 +563,22 @@ E-STOP 拍下
 解除後回到**冷啟動狀態**：重新連線、無控制權、通道中立。操作者必須重新請求控制權——
 解除急停不等於重新獲得駕駛授權。
 
+#### 解除後的重啟互鎖
+
+解除閂鎖**不會**立刻恢復控制。系統進入互鎖狀態，強制輸出中立，直到操作者：
+
+1. 將左右油門推桿歸回中立（±100 μs 內），且
+2. 將兩顆引擎開關都撥到 OFF
+
+在此之前，引擎閘門強制關閉、方向與油門固定送 1500、ARM 指令被忽略。
+
+沒有這道互鎖，解除後的第一個 `on_inputs`（100 ms 內）就會把推桿當下的位置重新套用——
+操作者若沒收油門就解除急停並撥引擎開關，`send_arm()` 會在滿油門 RC 已經串流的狀態下觸發。
+
+同時，**網頁控制會被強制關閉**。急停閂鎖期間無法關閉網頁控制（該端點被 `_blocked_by_estop`
+擋住），若解除後仍保持啟用，瀏覽器將獨佔控制權而遙控器的推桿完全失效——與「解除急停的人
+就是站在遙控器前的人」這個前提正好相反。
+
 > 閂鎖是必要的：若只看按鈕當下狀態，急停按鈕一復位就會自動重連並恢復油門輸出，
 > 等同無預警重新啟動。
 >
@@ -614,7 +633,8 @@ usv_controller/
 - 急停狀態機：`_estop_active`（按鈕現況）／`_estop_latched`（閂鎖）、
   `_engage_estop()` / `_clear_estop()`
 - 模式管理：`_apply_mode()`（含航向源檢查）、`_mode_watchdog()`（定位掉失自動退回
-  手動、恢復後節流重試）
+  手動、持續重新宣告開關要求的模式、不干預船端自主模式）
+- 重啟互鎖：`_resume_interlock`（急停解除後要求推桿歸中立、引擎開關關閉）
 - 引擎開關 → `mavlink.set_engine_gates()` 與整船 ARM/DISARM
   （`_arm_cmd_state` 追蹤本地意圖，避免重複下令）
 - 控制權按鈕手勢 → `mavlink.send_request_operator_control()`
@@ -626,6 +646,10 @@ usv_controller/
 - 控制發送：`send_rc_override()`（含引擎閘控）/ `send_arm()` / `send_disarm()` /
   `send_safe_state()` / `set_engine_gates()`
 - 模式：`set_mode()`（僅接受 `SELECTABLE_MODES`）、`desired_mode`（ARM 時沿用）
+- `_send()`：所有送出的單一出口，容忍 `disconnect()` 併發清空 socket。
+  背景執行緒若在檢查後、送出前被斷線，未保護的解參考會拋 `AttributeError`
+  並靜默終止該執行緒
+- `disconnect()` 會 **join** 背景執行緒後才返回，避免重連時產生兩組 RC 串流
 - 急停：`emergency_stop()`（歸零 ×3 → DISARM → 釋放控制權 → 斷線）、
   `resume_from_estop()`
 - 遙測接收：背景執行緒解析 HEARTBEAT / VFR_HUD / ATTITUDE / SYS_STATUS / GPS_RAW_INT 等
@@ -777,7 +801,9 @@ CONTROL_FAILSAFE_S = 1.0   # 秒，控制信號中斷後自動歸零的等待時
 7. 長按控制權鍵  → 釋放控制權
 
   任何時刻拍下急停 → 歸零、DISARM、切斷通訊、閂鎖
-  解除：復位急停鈕 + 長按控制權鍵 2 秒 → 重新連線（需重新請求控制權）
+  解除：復位急停鈕 + 長按控制權鍵 2 秒
+        → 重新連線，但進入互鎖：需推桿歸中立 + 引擎開關 OFF 才恢復控制
+        → 網頁控制被強制關閉，需重新請求控制權
 ```
 
 ### ArduPilot Rover 模式代碼

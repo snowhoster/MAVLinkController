@@ -153,6 +153,15 @@ _mode_denied = False
 _mode_retry_after = 0.0
 MODE_RETRY_S = 3.0
 
+# ── Resume interlock ──────────────────────────────────────────────────────────
+# Set when an E-STOP latch is cleared. Until the operator has physically put the
+# levers back to neutral AND switched both engines off, control inputs are held
+# at neutral. Without this the first on_inputs after the clear re-applies
+# whatever the levers happen to be sitting at — flipping an engine switch then
+# arms the vessel with full throttle already streaming.
+_resume_interlock = False
+THROTTLE_NEUTRAL_BAND = 100   # μs either side of 1500 that counts as neutral
+
 # LED state cache — sentinel (-1,-1,-1) forces first-iteration update
 _led1_state: tuple = (-1, -1, -1)
 _led2_state: tuple = (-1, -1, -1)
@@ -305,13 +314,22 @@ def _engage_estop():
 
 def _clear_estop():
     """Clear the latch and bring the link back up."""
-    global _estop_latched, _arm_cmd_state, _mode_sw_acro
+    global _estop_latched, _arm_cmd_state, _mode_sw_acro, _resume_interlock, _web_ctrl
     _estop_latched = False
     _arm_cmd_state = False
     # Forget the last known switch position so the next on_inputs re-pushes the
     # mode. After a reconnect the vessel may be in any mode, and the switch not
     # having moved must not be mistaken for the mode already being correct.
     _mode_sw_acro  = None
+    # Hand control back to the hardware. Web control could not be switched off
+    # while latched (_blocked_by_estop guards that handler), so leaving it on
+    # would give the browser sole authority over a vessel whose operator just
+    # cleared the stop at the controller — the opposite of the intent.
+    if _web_ctrl:
+        logger.warning("E-STOP cleared — web control disabled, hardware has control")
+        _web_ctrl = False
+    # Require a deliberate restart sequence before anything moves again.
+    _resume_interlock = True
     _last_inputs["left_thr"]  = 1500
     _last_inputs["right_thr"] = 1500
     threading.Thread(target=mavlink.resume_from_estop, daemon=True, name="mav-resume").start()
@@ -341,7 +359,7 @@ def on_inputs(steering: int, left_thr: int, right_thr: int,
               r_eng_state: int, r_eng_edge: int,
               ctrl_edge: int, estop_state: int, mode_sw_acro: int):
     """Called by MCU (via Bridge.notify) with current control inputs."""
-    global _estop_active, _arm_cmd_state, _mode_sw_acro
+    global _estop_active, _arm_cmd_state, _mode_sw_acro, _resume_interlock, _mode_denied
 
     # ── Emergency stop — evaluated before anything else ───────────────────────
     estop = bool(estop_state)
@@ -368,6 +386,22 @@ def on_inputs(steering: int, left_thr: int, right_thr: int,
     _last_inputs["l_eng_on"]  = bool(l_eng_state)
     _last_inputs["r_eng_on"]  = bool(r_eng_state)
 
+    # ── Post-E-STOP interlock ─────────────────────────────────────────────────
+    # Hold everything neutral until the operator has walked the controls back to
+    # a safe starting position. Clearing an E-STOP must not resume motion on its
+    # own — the restart has to be deliberate.
+    if _resume_interlock:
+        levers_neutral = (abs(left_thr  - 1500) <= THROTTLE_NEUTRAL_BAND and
+                          abs(right_thr - 1500) <= THROTTLE_NEUTRAL_BAND)
+        engines_off = not l_eng_state and not r_eng_state
+        if levers_neutral and engines_off:
+            _resume_interlock = False
+            logger.info("Resume interlock cleared — controls back at neutral")
+        else:
+            mavlink.set_engine_gates(False, False)
+            mavlink.send_rc_override(0, 1500, 1500)
+            return
+
     # ── Mode switch → MANUAL / ACRO ───────────────────────────────────────────
     want_acro = bool(mode_sw_acro)
     if want_acro != _mode_sw_acro:          # also fires on the first report
@@ -392,6 +426,14 @@ def on_inputs(steering: int, left_thr: int, right_thr: int,
         if any_on != _arm_cmd_state:
             _arm_cmd_state = any_on
             if any_on:
+                # send_arm() re-asserts desired_mode. If the fix has since been
+                # lost, that would arm the vessel straight into heading-hold
+                # with no usable heading — re-run the gate first.
+                if mavlink.desired_mode == MODE_ACRO and mavlink.gps_fix < MIN_FIX_FOR_ACRO:
+                    logger.warning("定向 no longer valid at ARM (gps_fix=%d) — arming in 手動",
+                                   mavlink.gps_fix)
+                    _mode_denied = True
+                    mavlink.set_mode(MODE_MANUAL)
                 logger.info("Engine switch (L=%s R=%s) → ARM", bool(l_eng_state), bool(r_eng_state))
                 mavlink.send_arm()
             else:
@@ -555,7 +597,7 @@ def _handle_set_gcs_sysid(_, data: dict):
 
 def _handle_connect_usv(_, data: dict):
     """Web browser requesting USV connection change."""
-    global _usv_config, _local_ip
+    global _usv_config, _local_ip, _mode_sw_acro, _arm_cmd_state
     if _blocked_by_estop("connect_usv"):
         return
     protocol    = str(data.get("protocol",    "udp")).lower()
@@ -585,6 +627,11 @@ def _handle_connect_usv(_, data: dict):
                 local_port or "auto", remote_ip, remote_port, protocol)
     mavlink.reconnect(protocol, remote_ip, remote_port, local_port)
     _local_ip = _get_local_ip(remote_ip)
+    # Same reasoning as _clear_estop: on a fresh link the vessel may be in any
+    # mode and disarmed. An unmoved switch must not read as "already correct",
+    # so drop the cached positions and let the next on_inputs re-assert them.
+    _mode_sw_acro  = None
+    _arm_cmd_state = False
 
 
 def _mode_watchdog(now: float):
@@ -599,20 +646,35 @@ def _mode_watchdog(now: float):
     """
     global _mode_denied, _mode_retry_after
 
-    if _estop_latched or not _mode_sw_acro:
+    if _estop_latched or _mode_sw_acro is None or mavlink.link_quality() == 0:
         return
 
     fix_ok = mavlink.gps_fix >= MIN_FIX_FOR_ACRO
 
-    if not fix_ok and mavlink.mode == MODE_ACRO:
+    # Losing the fix while actually in ACRO is the urgent case — act at once,
+    # without waiting for the retry throttle.
+    if _mode_sw_acro and not fix_ok and mavlink.mode == MODE_ACRO:
         logger.warning("定向 dropped — gps_fix=%d lost, falling back to 手動", mavlink.gps_fix)
         _mode_denied = True
         _mode_retry_after = now + MODE_RETRY_S
         mavlink.set_mode(MODE_MANUAL)
-    elif fix_ok and _mode_denied and now >= _mode_retry_after:
+        return
+
+    # Only re-assert while the vessel is in a mode we command. If it moved to
+    # HOLD/RTL/GUIDED on its own — its failsafe, or another GCS — that is its
+    # decision and overriding it could be exactly the wrong thing to do. The
+    # mismatch is surfaced on the LCD and web UI instead.
+    if mavlink.mode not in (MODE_MANUAL, MODE_ACRO):
+        return
+
+    want = MODE_ACRO if (_mode_sw_acro and fix_ok) else MODE_MANUAL
+    if mavlink.mode != want and now >= _mode_retry_after:
+        # Covers a dropped or refused SET_MODE: the switch position is a
+        # standing instruction, so keep asserting it rather than leaving the
+        # vessel in a mode the operator did not select.
         _mode_retry_after = now + MODE_RETRY_S
-        logger.info("定向 retry — gps_fix=%d recovered", mavlink.gps_fix)
-        _apply_mode(True)
+        logger.info("Mode re-assert — vessel in %d, switch wants %d", mavlink.mode, want)
+        _apply_mode(_mode_sw_acro and fix_ok)
 
 
 def loop():
@@ -675,6 +737,7 @@ def loop():
                 "estop_active":      _estop_active,
                 "mode_sw_acro":      bool(_mode_sw_acro),
                 "mode_denied":       _mode_denied,
+                "resume_interlock":  _resume_interlock,
             },
             "telemetry": {
                 "speed_kn":    round(mavlink.speed_knots, 1),

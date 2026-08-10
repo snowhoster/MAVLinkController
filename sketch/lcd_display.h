@@ -288,8 +288,12 @@ inline void lcd_update_dynamic(Adafruit_ILI9341* tft,
     // for lack of a heading source, or lost in transit) must be visible: the
     // operator is about to steer on the assumption that it did.
     tft->fillRect(45, 120, 113, 16, C_BG);
-    bool is_acro   = (vs->mode == MODE_ACRO);
-    bool mismatch  = (mode_sw_acro != is_acro);
+    // Compare against the requested mode, not just "is it ACRO" — a vessel that
+    // has gone to HOLD/RTL on its own while the switch sits at 手動 is equally
+    // not in the requested mode, and that has to be visible too.
+    uint8_t want_mode = mode_sw_acro ? MODE_ACRO : MODE_MANUAL;
+    bool is_acro  = (vs->mode == MODE_ACRO);
+    bool mismatch = (vs->mode != want_mode);
     draw_utf8_string(tft, 45, 120, ch_mode_str(vs->mode),
                      mismatch ? C_WHITE : (is_acro ? C_GREEN : C_CYAN), C_BG);
     if (mismatch) {

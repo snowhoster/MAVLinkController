@@ -123,6 +123,7 @@ body {
 
 .mode-badge.manual {
   background: rgba(0, 122, 204, 0.2);
+  border-color: #74c7ff;
   color: #74c7ff;
 }
 
@@ -987,11 +988,6 @@ button:active {
   color: var(--green);
 }
 
-.mode-badge.manual {
-  background: rgba(0, 204, 255, 0.12);
-  border-color: var(--cyan, #0cf);
-  color: var(--cyan, #0cf);
-}
 
 /* ── Emergency stop overlay ─────────────────────────────────────────────── */
 .estop-overlay.hidden {

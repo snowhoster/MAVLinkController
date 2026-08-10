@@ -1,2 +1,7 @@
 # ignore app cache folder
 .cache/
+
+# Python bytecode — regenerated on every run, and version-specific filenames
+# (cpython-39 vs cpython-313) collide across machines.
+__pycache__/
+*.py[cod]
