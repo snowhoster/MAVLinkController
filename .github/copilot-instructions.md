@@ -20,8 +20,8 @@ cd python && pip install pymavlink
 
 This is an **Arduino UNO Q dual-core app**:
 
-- **MCU (M4/Zephyr, `sketch/sketch.ino`)** — reads ADC inputs (steering A0, left throttle A1, right throttle A2) and five debounced digital inputs (D2 left engine, D3 right engine, D4 control-authority button, D5 E-STOP, D6 mode switch), drives the ILI9341 LCD via SPI at 5 Hz, controls LED3 (PWM) and LED4 (digital).
-- **Digital input polarity** — D2/D3/D4/D6 are `INPUT_PULLUP`, active-low. **D5 (E-STOP) is the exception**: it is wired to an NC contact and is active-**high**, so a broken wire trips the stop. All five go through the 25 ms `DebouncedInput` helper.
+- **MCU (M4/Zephyr, `sketch/sketch.ino`)** — reads ADC inputs (steering A0, left throttle A1, right throttle A2) and five debounced digital inputs (A3 left engine, A4 right engine, A5 control-authority button, D20 E-STOP, D21 mode switch), drives the ILI9341 LCD via SPI at 5 Hz, controls LED3 (PWM) and LED4 (digital).
+- **Digital input polarity** — A3/A4/A5/D21 are `INPUT_PULLUP`, active-low. **D20 (E-STOP) is the exception**: it is wired to an NC contact and is active-**high**, so a broken wire trips the stop. All five go through the 25 ms `DebouncedInput` helper.
 - **MPU (Linux, `python/main.py`)** — receives MCU inputs via RouterBridge, forwards them as MAVLink RC_CHANNELS_OVERRIDE to the USV over WiFi UDP, pushes telemetry back to the MCU LCD display at 5 Hz.
 - **`python/mavlink_handler.py`** — all MAVLink v2 logic: three background threads (`mav-rx`, `mav-hb`, `mav-ctrl`), failsafe, operator-control-authority state machine.
 - **`sketch/lcd_display.h`** — all ILI9341 drawing code; MCU imports this header.

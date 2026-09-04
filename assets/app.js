@@ -10,7 +10,7 @@ const ROVER_MODES = {
 
 const GPS_FIX = ['無定位', '無定位', '2D 定位', '3D 定位', '3D DGPS', 'RTK 浮動', 'RTK 固定'];
 
-// Only two modes are selectable, and only from the controller's D6 switch.
+// Only two modes are selectable, and only from the controller's D21 switch.
 // Without a chart there is no way to place waypoints, so AUTO/GUIDED/RTL have
 // no operator interface here — they are decoded for display only.
 const MODE_MANUAL = 0;
@@ -324,7 +324,7 @@ function updateArmBtn(armed) {
 }
 
 // Read-only mode indicator. `mode` is what the vessel reports; swAcro is where
-// the D6 switch sits. When they disagree the requested mode has not taken
+// the D21 switch sits. When they disagree the requested mode has not taken
 // effect — the operator needs to see that before steering on the assumption
 // that it did.
 function updateModeReadout(mode, swAcro, denied, interlock) {
@@ -486,7 +486,7 @@ el('web-disarm-btn').addEventListener('click', () => {
   if (webCtrlEnabled) socket.emit('control', { ...ctrl, steering: 0, left_thr: 1500, right_thr: 1500 });
 });
 
-// No mode-change listeners: mode is owned by the controller's D6 switch.
+// No mode-change listeners: mode is owned by the controller's D21 switch.
 
 resetThrottleControls();
 setSteeringControl(1500, false);

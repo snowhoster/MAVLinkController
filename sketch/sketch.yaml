@@ -4,6 +4,7 @@ profiles:
     platforms:
       - platform: arduino:zephyr
     libraries:
+      - Arduino_RouterBridge (0.4.3)
       - Arduino_RPClite (0.2.1)
       - MsgPack (0.4.2)
       - DebugLog (0.8.4)
@@ -12,4 +13,8 @@ profiles:
       - Adafruit ILI9341 (1.6.3)
       - Adafruit GFX Library (1.12.6)
       - Adafruit BusIO (1.17.4)
+      # Adafruit_ILI9341 1.6.3 無條件 include pins_arduino.h / wiring_private.h，
+      # arduino:zephyr 核心沒有這兩個標頭 —— 本地 shim 函式庫補上。詳見
+      # libs/ZephyrAvrCompat/src/ZephyrAvrCompat.h
+      - dir: ../libs/ZephyrAvrCompat
 default_profile: default

@@ -218,8 +218,7 @@ inline void lcd_update_dynamic(Adafruit_ILI9341* tft,
                                int16_t  steering,
                                uint16_t l_thr,
                                uint16_t r_thr,
-                               bool     l_eng_on,
-                               bool     r_eng_on,
+                               bool     engine_on,
                                bool     estop_local,
                                bool     mode_sw_acro) {
     char buf[24];
@@ -310,12 +309,10 @@ inline void lcd_update_dynamic(Adafruit_ILI9341* tft,
         draw_utf8_string(tft, 45, 144, "斷線", C_RED, C_BG);
     }
 
-    // Row 7: Engine — 左右引擎閘門狀態（遙控器端），右側小圓點為船端實際 ARM 狀態
+    // Row 7: Engine — 引擎開關狀態（遙控器端），右側小圓點為船端實際 ARM 狀態
     tft->fillRect(45, 168, 113, 16, C_BG);
-    draw_utf8_string(tft,  45, 168, "左", C_GRAY, C_BG);
-    draw_utf8_string(tft,  61, 168, l_eng_on ? "開" : "關", l_eng_on ? C_GREEN : C_RED, C_BG);
-    draw_utf8_string(tft,  85, 168, "右", C_GRAY, C_BG);
-    draw_utf8_string(tft, 101, 168, r_eng_on ? "開" : "關", r_eng_on ? C_GREEN : C_RED, C_BG);
+    draw_utf8_string(tft, 45, 168, engine_on ? "啟動" : "關閉",
+                     engine_on ? C_GREEN : C_RED, C_BG);
     tft->fillCircle(146, 176, 5, vs->armed ? C_GREEN : C_RED);
 
     // Row 8: Local (MPU) IP:Port

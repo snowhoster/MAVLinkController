@@ -126,7 +126,7 @@ _estop_latched = False
 # locally rather than read back from mavlink.armed, which lags by a heartbeat.
 _arm_cmd_state = False
 
-# ── Mode switch (D6) ──────────────────────────────────────────────────────────
+# ── Mode switch (D21) ──────────────────────────────────────────────────────────
 # Only two modes are offered: 手動 (MANUAL) and 定向 (ACRO). Without a chart
 # there is no way to place waypoints, so the waypoint-driven modes (AUTO,
 # GUIDED, RTL) have no operator interface and are not selectable.
@@ -417,10 +417,10 @@ def on_inputs(steering: int, left_thr: int, right_thr: int,
     if not _web_ctrl:
         mavlink.send_rc_override(steering, left_thr, right_thr)
 
-    # ── Engine switches → vessel ARM/DISARM ───────────────────────────────────
-    # MAVLink arms the whole vessel; there is no per-engine ARM. So either
-    # switch being ON arms the ship, and only both OFF disarms it. Which engine
-    # actually turns is decided by the throttle gates above.
+    # ── Engine switch → vessel ARM/DISARM ─────────────────────────────────────
+    # Single unified engine switch (momentary (ON)-OFF-(ON) toggle):
+    # Flick UP (A3) = ARM, Flick DOWN (A4) = DISARM, release springs to center.
+    # Left and right engines are wired together on the vessel.
     if l_eng_edge != EDGE_NONE or r_eng_edge != EDGE_NONE:
         any_on = bool(l_eng_state) or bool(r_eng_state)
         if any_on != _arm_cmd_state:
@@ -434,10 +434,10 @@ def on_inputs(steering: int, left_thr: int, right_thr: int,
                                    mavlink.gps_fix)
                     _mode_denied = True
                     mavlink.set_mode(MODE_MANUAL)
-                logger.info("Engine switch (L=%s R=%s) → ARM", bool(l_eng_state), bool(r_eng_state))
+                logger.info("Engine switch → ARM")
                 mavlink.send_arm()
             else:
-                logger.info("Both engine switches OFF → DISARM")
+                logger.info("Engine switch → DISARM")
                 mavlink.send_disarm()
                 # Reset throttle to neutral on disarm (matches C# reference slider reset)
                 _last_inputs["left_thr"]  = 1500
@@ -556,14 +556,14 @@ def _handle_set_led(_, data: dict):
 
 
 def _handle_set_mode(_, data: dict):
-    """Mode changes come from the D6 switch only — the web request is refused.
+    """Mode changes come from the D21 switch only — the web request is refused.
 
     Two authorities over one setting would fight: the switch re-asserts its
     position on every change and after every reconnect, so a web-selected mode
     would be silently reverted. Better to refuse it outright and keep the
     switch's physical position an honest indicator of the vessel's mode.
     """
-    logger.warning("Web → SET_MODE refused; mode is controlled by the D6 switch")
+    logger.warning("Web → SET_MODE refused; mode is controlled by the D21 switch")
 
 
 def _handle_acquire_control(_, data: dict):
