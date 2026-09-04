@@ -207,7 +207,8 @@ Arduino D21 ──[模式開關]──────────── GND
      - **Row H 貫穿接地排**：0.8mm 鍍錫裸銅線貫穿橫跨整板（Col 4 至 Col 35），所有元件 GND 腳直接折腳拖焊其上。
      - **Row F 拖焊錫橋**：左油門分壓節點 `(16-F, 17-F, 18-F)` 與右油門分壓節點 `(20-F, 21-F, 22-F)` 採用背面折腳拖焊成一體飽滿錫球，引出跳線分別直插 Arduino `A1` 與 `A2`。
      - **背面仰視鏡像圖紙**：左右已水平鏡像對調（Col 40 到 Col 1），拿著烙鐵翻轉洞洞板仰視施工時看哪裡就焊哪裡，免左右反向心算！
-     - 完整 5 頁工程圖紙與孔位表請參見：[docs/hardware_diagram.html](file:///E:/Source/MIS/2026/MAVLinkController/docs/hardware_diagram.html) ｜ 5 頁完整 PDF 列印圖紙：[docs/hardware_diagram.pdf](file:///E:/Source/MIS/2026/MAVLinkController/docs/hardware_diagram.pdf)
+     - 完整 7 頁工程圖紙、孔位表、實物照片圖鑑與台灣採購指南請參見：[docs/hardware_diagram.html](file:///E:/Source/MIS/2026/MAVLinkController/docs/hardware_diagram.html) ｜ 7 頁完整高解析 PDF 列印圖紙：[docs/hardware_diagram.pdf](file:///E:/Source/MIS/2026/MAVLinkController/docs/hardware_diagram.pdf)
+     - **實物照片圖鑑與台灣在地採購指南**：包含 13 大關鍵零件（雙 APEM SN 霍爾推桿、Arduino UNO Q、雙節 18650 UPS 模組、松下 BSMI 電芯、FR-4 玻纖板、LCD 1602、急停按鈕、搖頭開關、精密電阻電容與端子線材）之真實產品照片、關鍵參數、台灣推薦通路（Mouser、DigiKey、ICShop、良興電子、蝦皮現貨、廣華電子）與採購防坑手冊。
 
 ---
 
