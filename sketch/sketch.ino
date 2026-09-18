@@ -15,6 +15,19 @@
 #define PIN_LEFT_THR   A1   // 左油門：工業級 APEM SN 系列 T-Bar 霍爾推桿 (5V供電，經載板 10k:20k 分壓為 0~3.33V)
 #define PIN_RIGHT_THR  A2   // 右油門：工業級 APEM SN 系列 T-Bar 霍爾推桿 (5V供電，經載板 10k:20k 分壓為 0~3.33V)
 
+// ── 類比輸入校正 ─────────────────────────────────────────────────────────────
+// 方向盤：電位計實際接線方向與舵向相反（往左轉舵卻往右跑、最左顯示 +1000），
+// 故將輸出極性反轉，讓「往左 = 負、往右 = 正」。若日後重新接線可改回 0。
+#define STEER_REVERSED  1
+
+// 油門推桿：霍爾推桿實測行程不會涵蓋整個 0~1023，原先只能顯示 26%~100% / 22%~100%。
+// 以下為實測 ADC 端點（拉到底 / 推到底），用 map 把實際行程展成 1000~2000 μs 全範圍，
+// 對應 LCD 上的 -100% ~ +100%。若更換推桿，量測 Serial 或 LCD 端點值後修改這裡即可。
+#define LEFT_THR_ADC_MIN    266   // 26% × 1023 → 左推桿拉到底（-100%）
+#define LEFT_THR_ADC_MAX   1023   //            左推桿推到底（+100%）
+#define RIGHT_THR_ADC_MIN   225   // 22% × 1023 → 右推桿拉到底（-100%）
+#define RIGHT_THR_ADC_MAX  1023   //            右推桿推到底（+100%）
+
 // 這 5 個數位輸入刻意避開 D0–D7 那排排針。UNO 外形的 D7↔D8 間距是 0.16"（4.06mm），
 // 落不到萬用板的 0.1" 孔上，整排要彎 1.02mm 才插得進去。改用 A3–A5 與 D20/D21 之後，
 // 擴充板只需焊 10P（D8–D21）／8P（電源）／6P（類比）三排，全部正落在孔位，不必彎腳。
@@ -235,12 +248,20 @@ void loop() {
     }
 
     // ── 類比輸入 ──────────────────────────────────────────────────────────────
-    // A0: 方向盤舵角 (WH148 B10K, 0~3.3V)
+    // A0: 方向盤舵角 (WH148 B10K, 0~3.3V) → -1000(左) ~ +1000(右)
+#if STEER_REVERSED
+    g_steering  = (int16_t)map(analogRead(PIN_STEERING), 0, 1023, 1000, -1000);
+#else
     g_steering  = (int16_t)map(analogRead(PIN_STEERING), 0, 1023, -1000, 1000);
+#endif
     // A1: 左油門 APEM SN Series T-Bar 霍爾推桿 (5V 供電，經載板 10k:20k 精密分壓為 0~3.33V)
-    g_left_thr  = (uint16_t)map(analogRead(PIN_LEFT_THR), 0, 1023, 1000, 2000);
+    //     實測行程 LEFT_THR_ADC_MIN~MAX → 展成 1000~2000 μs（LCD 顯示 -100%~+100%）
+    g_left_thr  = (uint16_t)map(constrain(analogRead(PIN_LEFT_THR), LEFT_THR_ADC_MIN, LEFT_THR_ADC_MAX),
+                                LEFT_THR_ADC_MIN, LEFT_THR_ADC_MAX, 1000, 2000);
     // A2: 右油門 APEM SN Series T-Bar 霍爾推桿 (5V 供電，經載板 10k:20k 精密分壓為 0~3.33V)
-    g_right_thr = (uint16_t)map(analogRead(PIN_RIGHT_THR), 0, 1023, 1000, 2000);
+    //     實測行程 RIGHT_THR_ADC_MIN~MAX → 展成 1000~2000 μs（LCD 顯示 -100%~+100%）
+    g_right_thr = (uint16_t)map(constrain(analogRead(PIN_RIGHT_THR), RIGHT_THR_ADC_MIN, RIGHT_THR_ADC_MAX),
+                                RIGHT_THR_ADC_MIN, RIGHT_THR_ADC_MAX, 1000, 2000);
 
     // 急停期間 MCU 端就先歸零，不依賴 MPU 有沒有收到（推桿未歸位也強制中立，引擎強制關閉）
     if (estop_on) {

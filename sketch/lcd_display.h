@@ -320,30 +320,30 @@ inline void lcd_update_dynamic(Adafruit_ILI9341* tft,
     snprintf(buf, sizeof(buf), "%s:%u", vs->local_ip, vs->local_port);
     draw_small_ascii(tft, 45, 196, buf, C_WHITE, C_BG);
 
-    // Row 9: Rudder angle (degrees, max deflection ±45°)
-    int steer_deg = (int)(steering * 45L / 1000L);
+    // Row 9: Rudder angle (degrees, max deflection ±40°)
+    int steer_deg = (int)(steering * 40L / 1000L);
     tft->fillRect(45, 216, 110, 16, C_BG);
     snprintf(buf, sizeof(buf), "%+d度", steer_deg);
     draw_utf8_string(tft, 45, 216, buf, C_WHITE, C_BG);
 
     // ── Right Column: Throttles, Steering & Vessel Graphics ──────────────────
-    // 1. Vertical Throttle Bars
-    int l_pct = map(l_thr, 1000, 2000, 0, 100);
-    int r_pct = map(r_thr, 1000, 2000, 0, 100);
+    // 1. Vertical Throttle Bars — 1000~2000 μs 對應 -100%(拉到底) ~ +100%(推到底)，1500 = 0%
+    int l_pct = map(l_thr, 1000, 2000, -100, 100);
+    int r_pct = map(r_thr, 1000, 2000, -100, 100);
 
     draw_vbar(tft, 185, 70, 10, 70, l_thr, 1000, 2000, C_ORANGE);
     tft->fillRect(170, 145, 40, 16, C_BG);
-    snprintf(buf, sizeof(buf), "%d%%", l_pct);
+    snprintf(buf, sizeof(buf), "%+d%%", l_pct);
     draw_utf8_string(tft, 175, 145, buf, C_WHITE, C_BG);
 
     draw_vbar(tft, 285, 70, 10, 70, r_thr, 1000, 2000, C_ORANGE);
     tft->fillRect(270, 145, 40, 16, C_BG);
-    snprintf(buf, sizeof(buf), "%d%%", r_pct);
+    snprintf(buf, sizeof(buf), "%+d%%", r_pct);
     draw_utf8_string(tft, 275, 145, buf, C_WHITE, C_BG);
 
-    // 2. Dynamic Steering Numeric Display
+    // 2. Dynamic Steering Numeric Display — 舵角 ±40度（左負右正）
     tft->fillRect(205, 188, 70, 16, C_BG);
-    snprintf(buf, sizeof(buf), "%+d", steering);
+    snprintf(buf, sizeof(buf), "%+d度", steer_deg);
     draw_utf8_string(tft, 210, 188, buf, C_WHITE, C_BG);
 
     // 3. Vessel Outline Graphic
@@ -358,7 +358,7 @@ inline void lcd_update_dynamic(Adafruit_ILI9341* tft,
     tft->fillRect(220, 140, 40, 22, C_BG); // Erase old rudder area
     tft->drawLine(222, 140, 258, 140, boat_color); // Restore Stern line
     
-    // Calculate rudder line end point based on steering angle (steer_deg, ±45° max)
+    // Calculate rudder line end point based on steering angle (steer_deg, ±40° max)
     float angle_rad = steer_deg * DEG_TO_RAD;
     int rx = 240 + (int)(sin(angle_rad) * 15.0);
     int ry = 140 + (int)(cos(angle_rad) * 15.0);
