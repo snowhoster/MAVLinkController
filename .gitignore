@@ -5,3 +5,6 @@
 # (cpython-39 vs cpython-313) collide across machines.
 __pycache__/
 *.py[cod]
+
+# Per-controller input calibration written by the web "輸入校正" panel — hardware-specific, not shared
+python/input_calib.json

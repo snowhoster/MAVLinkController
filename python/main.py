@@ -3,6 +3,7 @@ main.py — USV Remote Controller (Linux / MPU side)
 
 MCU→MPU: Bridge.provide("on_inputs", ...)  — receives ADC values + switch edge
 MPU→MCU: Bridge.call("update_display", ...)— pushes vessel status for LCD
+MPU→MCU: Bridge.call("set_calib", ...)     — pushes AI scale / DI invert calibration
 WebUI:   ui.send_message("state", {...})   — broadcasts all data to browser at 5 Hz
 """
 
@@ -60,6 +61,95 @@ def _save_config(cfg: dict):
 
 _usv_config = _load_config()
 
+# ── Input calibration (AI scale / reverse, DI invert) ─────────────────────────
+# Edited from the web "輸入校正" panel, persisted here on the MPU and pushed to
+# the MCU with Bridge.call("set_calib"). The MCU applies it at the source so the
+# LCD, the local E-STOP logic and the values sent to the vessel all agree.
+_CALIB_PATH = os.path.join(os.path.dirname(__file__), "input_calib.json")
+AI_KEYS = ("steering", "left_thr", "right_thr")
+# Bit order must match the DI_BIT_* defines in sketch.ino
+DI_KEYS = ("eng_start", "eng_stop", "ctrl_btn", "estop", "mode_sw")
+_DEFAULT_CALIB = {
+    "ai": {
+        # min/max = measured ADC end points, ctr = neutral (0 → midpoint), rev = reverse
+        "steering":  {"min": 0,   "ctr": 0, "max": 1023, "rev": True},   # pot wired backwards
+        "left_thr":  {"min": 266, "ctr": 0, "max": 1023, "rev": False},  # lever travel 26%~100%
+        "right_thr": {"min": 225, "ctr": 0, "max": 1023, "rev": False},  # lever travel 22%~100%
+    },
+    "di": {k: False for k in DI_KEYS},
+}
+
+
+def _sanitize_calib(raw: dict) -> dict:
+    """Clamp a calibration dict from disk or the browser into a valid one."""
+    out = {"ai": {}, "di": {}}
+    ai_in = raw.get("ai", {}) if isinstance(raw, dict) else {}
+    di_in = raw.get("di", {}) if isinstance(raw, dict) else {}
+    for k in AI_KEYS:
+        d = ai_in.get(k, {}) if isinstance(ai_in, dict) else {}
+        dflt = _DEFAULT_CALIB["ai"][k]
+        try:
+            mn  = max(0, min(1023, int(d.get("min", dflt["min"]))))
+            mx  = max(0, min(1023, int(d.get("max", dflt["max"]))))
+            ctr = max(0, min(1023, int(d.get("ctr", dflt["ctr"]))))
+            rev = bool(d.get("rev", dflt["rev"]))
+        except (TypeError, ValueError):
+            mn, mx, ctr, rev = dflt["min"], dflt["max"], dflt["ctr"], dflt["rev"]
+        if mx <= mn:                      # degenerate span → fall back to defaults
+            mn, mx = dflt["min"], dflt["max"]
+        if not (mn < ctr < mx):           # centre outside the span → auto midpoint
+            ctr = 0
+        out["ai"][k] = {"min": mn, "ctr": ctr, "max": mx, "rev": rev}
+    for k in DI_KEYS:
+        out["di"][k] = bool(di_in.get(k, False)) if isinstance(di_in, dict) else False
+    return out
+
+
+def _load_calib() -> dict:
+    try:
+        with open(_CALIB_PATH) as f:
+            return _sanitize_calib(json.load(f))
+    except Exception:
+        return _sanitize_calib(_DEFAULT_CALIB)
+
+
+def _save_calib(cal: dict):
+    try:
+        with open(_CALIB_PATH, "w") as f:
+            json.dump(cal, f, indent=2)
+    except Exception as exc:
+        logger.error("Failed to save calibration: %s", exc)
+
+
+_calib = _load_calib()
+
+# The MCU reports calib_loaded=0 until set_calib has reached it (fresh boot or
+# reset), so the push is retried from loop() rather than fired once at startup.
+_calib_push_pending = True
+_calib_push_last    = 0.0
+CALIB_PUSH_RETRY_S  = 1.0
+
+
+def _di_invert_mask(cal: dict) -> int:
+    return sum(1 << i for i, k in enumerate(DI_KEYS) if cal["di"].get(k))
+
+
+def _push_calib():
+    """Bridge.call("set_calib") — argument order must match sketch set_calib()."""
+    global _calib_push_pending, _calib_push_last
+    args = []
+    for k in AI_KEYS:
+        a = _calib["ai"][k]
+        args += [int(a["min"]), int(a["ctr"]), int(a["max"]), int(bool(a["rev"]))]
+    args.append(_di_invert_mask(_calib))
+    try:
+        Bridge.call("set_calib", *args)
+        logger.info("Calibration pushed to MCU: %s", args)
+        _calib_push_pending = False
+    except Exception as exc:
+        logger.warning("set_calib push failed (MCU not ready?): %s", exc)
+    _calib_push_last = time.time()
+
 
 def _get_local_ip(remote_ip: str) -> str:
     """Best-effort local outbound IP for the route toward remote_ip (no packets sent)."""
@@ -109,6 +199,12 @@ _last_inputs: dict = {
     "right_thr": 1500,
     "l_eng_on": False,
     "r_eng_on": False,
+}
+
+# Latest raw MCU readings for the calibration panel (ADC counts, DI pin levels)
+_last_raw: dict = {
+    "steering": 0, "left_thr": 0, "right_thr": 0,
+    "di_raw": 0, "di_state": 0, "calib_loaded": False,
 }
 
 # Web control mode: when True, MCU RC override is suppressed
@@ -357,9 +453,22 @@ def _apply_mode(want_acro: bool) -> bool:
 def on_inputs(steering: int, left_thr: int, right_thr: int,
               l_eng_state: int, l_eng_edge: int,
               r_eng_state: int, r_eng_edge: int,
-              ctrl_edge: int, estop_state: int, mode_sw_acro: int):
+              ctrl_edge: int, estop_state: int, mode_sw_acro: int,
+              raw_steer: int = 0, raw_lthr: int = 0, raw_rthr: int = 0,
+              di_raw: int = 0, di_state: int = 0, calib_loaded: int = 1):
     """Called by MCU (via Bridge.notify) with current control inputs."""
     global _estop_active, _arm_cmd_state, _mode_sw_acro, _resume_interlock, _mode_denied
+    global _calib_push_pending
+
+    # Raw readings are recorded before any early return so the calibration
+    # panel keeps working while the E-STOP is latched — that is exactly when an
+    # operator may want to check what a switch is reading.
+    _last_raw.update({
+        "steering": raw_steer, "left_thr": raw_lthr, "right_thr": raw_rthr,
+        "di_raw": di_raw, "di_state": di_state, "calib_loaded": bool(calib_loaded),
+    })
+    if not calib_loaded:
+        _calib_push_pending = True      # MCU (re)booted with defaults — resend ours
 
     # ── Emergency stop — evaluated before anything else ───────────────────────
     estop = bool(estop_state)
@@ -634,6 +743,42 @@ def _handle_connect_usv(_, data: dict):
     _arm_cmd_state = False
 
 
+def _handle_set_calib(_, data: dict):
+    """Web browser saving input calibration (AI min/ctr/max/rev, DI invert).
+
+    Refused while anything could move: a DI invert flips the meaning of the
+    engine and E-STOP switches, and an AI change re-scales throttle instantly.
+    Both are only safe with the vessel disarmed and the controller at rest.
+    """
+    global _calib, _calib_push_pending
+    reason = None
+    if _estop_latched:
+        reason = "急停閂鎖中，不可修改校正"
+    elif mavlink.armed or _arm_cmd_state:
+        reason = "引擎運轉中（ARMED），請先 DISARM 再修改校正"
+    elif _last_inputs["l_eng_on"] or _last_inputs["r_eng_on"]:
+        reason = "引擎開關為 ON，請先關閉引擎再修改校正"
+    if reason:
+        logger.warning("set_calib refused — %s", reason)
+        ui.send_message("calib_result", {"ok": False, "msg": reason})
+        return
+    try:
+        if data.get("reset"):
+            _calib = _sanitize_calib(_DEFAULT_CALIB)
+            msg = "已還原預設校正並下發 MCU"
+        else:
+            _calib = _sanitize_calib(data)
+            msg = "校正已儲存並下發 MCU"
+        _save_calib(_calib)
+        _calib_push_pending = True
+        _push_calib()
+        logger.info("Calibration updated: %s", _calib)
+        ui.send_message("calib_result", {"ok": True, "msg": msg, "calib": _calib})
+    except Exception as exc:
+        logger.error("set_calib error: %s", exc)
+        ui.send_message("calib_result", {"ok": False, "msg": f"校正儲存失敗：{exc}"})
+
+
 def _mode_watchdog(now: float):
     """Keep 定向 valid, or drop out of it.
 
@@ -684,6 +829,11 @@ def loop():
 
     _mode_watchdog(now)
 
+    # Calibration hand-off to the MCU: on startup, after a web save, and again
+    # whenever the MCU reports it is running on defaults (it rebooted).
+    if _calib_push_pending and now - _calib_push_last >= CALIB_PUSH_RETRY_S:
+        _push_calib()
+
     if now - _last_display_push >= 0.2:
         lq = mavlink.link_quality()
 
@@ -724,6 +874,8 @@ def loop():
                 "l_eng_on":  _last_inputs["l_eng_on"],
                 "r_eng_on":  _last_inputs["r_eng_on"],
             },
+            "raw":   dict(_last_raw),      # ADC counts + DI pin levels for the calibration panel
+            "calib": _calib,               # current AI/DI calibration (mirrors input_calib.json)
             "comms": {
                 "link_quality": lq,
                 "hb_age_s":     hb_age,
@@ -785,6 +937,7 @@ ui.on_message("connect_usv",      _handle_connect_usv)
 ui.on_message("acquire_control",  _handle_acquire_control)
 ui.on_message("release_control",  _handle_release_control)
 ui.on_message("set_gcs_sysid",    _handle_set_gcs_sysid)
+ui.on_message("set_calib",        _handle_set_calib)
 mavlink.connect()
 logger.info("USV Controller ready — waiting for MCU and USV heartbeat")
 

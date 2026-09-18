@@ -131,6 +131,8 @@ socket.on('disconnect', () => {
 socket.on('state', (d) => {
   if (d.connection) updateConnectionUI(d.connection);
   if (d.inputs) updateInputs(d.inputs);
+  if (d.raw) updateCalibRaw(d.raw);
+  if (d.calib) updateCalibFields(d.calib);
   if (d.comms) updateComms(d.comms);
   if (d.telemetry) updateTelemetry(d.telemetry);
   // Needs both blocks: the vessel's mode lives in telemetry, the switch
@@ -230,7 +232,7 @@ function updateInputs({ steering, left_thr, right_thr, l_eng_on, r_eng_on }) {
   }
 
   // Update SVG rudder line deflection
-  const steeringAngleRad = (steering / 1000) * 0.7853; // max 45 degrees
+  const steeringAngleRad = (steering / 1000) * 0.6981; // max 40 degrees (matches LCD)
   const rx = (110 + 20 * Math.sin(steeringAngleRad)).toFixed(1);
   const ry = (125 + 20 * Math.cos(steeringAngleRad)).toFixed(1);
   el('web-rudder').setAttribute('x2', rx);
@@ -238,6 +240,7 @@ function updateInputs({ steering, left_thr, right_thr, l_eng_on, r_eng_on }) {
 
   const steeringUs = steeringCtrlToUs(steering);
   el('steer-val').textContent = formatSteerValue(steeringUs);
+  updateCalibOutputs({ steering, left_thr, right_thr });
 
   const leftPct = clamp(((left_thr - 1000) / 1000) * 100, 0, 100);
   const rightPct = clamp(((right_thr - 1000) / 1000) * 100, 0, 100);
@@ -559,3 +562,162 @@ el('sysid-btn').addEventListener('click', () => {
     activeLed = null;
   });
 })();
+
+// ── Input Calibration（AI 比例轉換／反向、DI 反向）───────────────────────────
+// Rows are built from these tables; keys and DI bit order must match main.py
+// (AI_KEYS / DI_KEYS) and the DI_BIT_* defines in sketch.ino.
+const AI_DEFS = [
+  { key: 'steering',  label: '方向盤 (A0)',  fmt: v => `${v > 0 ? '+' : ''}${v} → ${Math.round(v * 40 / 1000) > 0 ? '+' : ''}${Math.round(v * 40 / 1000)}°` },
+  { key: 'left_thr',  label: '左油門 (A1)',  fmt: v => `${v} us (${formatSignedPct(formatPctFromUs(v))})` },
+  { key: 'right_thr', label: '右油門 (A2)',  fmt: v => `${v} us (${formatSignedPct(formatPctFromUs(v))})` },
+];
+const DI_DEFS = [
+  { key: 'eng_start', bit: 0, label: '引擎啟動 (A3)',       on: '撥上',  off: '放開' },
+  { key: 'eng_stop',  bit: 1, label: '引擎關閉 (A4)',       on: '撥下',  off: '放開' },
+  { key: 'ctrl_btn',  bit: 2, label: '控制權按鈕 (A5)',     on: '按下',  off: '放開' },
+  { key: 'estop',     bit: 3, label: '緊急停止 (D20, NC)',  on: '急停!', off: '正常', warn: true },
+  { key: 'mode_sw',   bit: 4, label: '模式開關 (D21)',      on: '定向',  off: '手動' },
+];
+
+let _calibDirty = false;       // user has unsaved edits → stop syncing fields from server
+let _calibRaw = { steering: 0, left_thr: 0, right_thr: 0, di_raw: 0, di_state: 0, calib_loaded: false };
+
+function buildCalibTables() {
+  const aiBody = el('calib-ai-table').querySelector('tbody');
+  aiBody.innerHTML = AI_DEFS.map(d => `
+    <tr data-ai="${d.key}">
+      <td class="calib-name">${d.label}</td>
+      <td class="calib-raw" id="calraw-${d.key}">—</td>
+      ${['min', 'ctr', 'max'].map(k => `
+        <td><div class="cap-cell">
+          <input class="inp-field cal-inp" data-k="${k}" type="number" min="0" max="1023" step="1">
+          <button class="cap-btn" data-k="${k}" title="擷取目前 ADC 原始值">取</button>
+        </div></td>`).join('')}
+      <td class="calib-center"><label class="switch small"><input type="checkbox" class="cal-rev"><span class="slider-pill"></span></label></td>
+      <td class="calib-out" id="calout-${d.key}">—</td>
+    </tr>`).join('');
+
+  const diBody = el('calib-di-table').querySelector('tbody');
+  diBody.innerHTML = DI_DEFS.map(d => `
+    <tr data-di="${d.key}">
+      <td class="calib-name">${d.label}${d.warn ? ' <span class="calib-warn" title="急停預設為 NC 常閉接法：斷線即觸發。反向後斷線將視為正常，會失去 fail-safe 保護">⚠</span>' : ''}</td>
+      <td class="calib-raw" id="dilvl-${d.key}">—</td>
+      <td id="distate-${d.key}"><span class="engine-badge off">—</span></td>
+      <td class="calib-center"><label class="switch small"><input type="checkbox" class="cal-inv"><span class="slider-pill"></span></label></td>
+    </tr>`).join('');
+
+  el('calib-details').querySelectorAll('.cal-inp, .cal-rev, .cal-inv').forEach(node => {
+    node.addEventListener('input',  markCalibDirty);
+    node.addEventListener('change', markCalibDirty);
+  });
+  el('calib-details').querySelectorAll('.cap-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const row = btn.closest('tr');
+      const inp = row.querySelector(`.cal-inp[data-k="${btn.dataset.k}"]`);
+      inp.value = _calibRaw[row.dataset.ai] ?? 0;
+      inp.classList.add('captured');
+      setTimeout(() => inp.classList.remove('captured'), 600);
+      markCalibDirty();
+    });
+  });
+}
+
+function markCalibDirty() {
+  _calibDirty = true;
+  setCalibMsg('尚未儲存', 'pending');
+}
+
+function setCalibMsg(text, cls) {
+  const m = el('calib-msg');
+  m.textContent = text;
+  m.className = `calib-msg ${cls || ''}`;
+}
+
+function updateCalibFields(calib) {
+  if (_calibDirty || !calib) return;
+  AI_DEFS.forEach(d => {
+    const row = el('calib-ai-table').querySelector(`tr[data-ai="${d.key}"]`);
+    const a = calib.ai?.[d.key];
+    if (!row || !a) return;
+    ['min', 'ctr', 'max'].forEach(k => {
+      const inp = row.querySelector(`.cal-inp[data-k="${k}"]`);
+      if (document.activeElement !== inp) inp.value = a[k];
+    });
+    row.querySelector('.cal-rev').checked = Boolean(a.rev);
+  });
+  DI_DEFS.forEach(d => {
+    const row = el('calib-di-table').querySelector(`tr[data-di="${d.key}"]`);
+    if (row) row.querySelector('.cal-inv').checked = Boolean(calib.di?.[d.key]);
+  });
+}
+
+function updateCalibRaw(raw) {
+  _calibRaw = raw;
+  AI_DEFS.forEach(d => { el(`calraw-${d.key}`).textContent = raw[d.key] ?? '—'; });
+  DI_DEFS.forEach(d => {
+    const lvl = (raw.di_raw >> d.bit) & 1;
+    const on  = (raw.di_state >> d.bit) & 1;
+    el(`dilvl-${d.key}`).textContent = lvl ? 'HIGH' : 'LOW';
+    el(`distate-${d.key}`).innerHTML =
+      `<span class="engine-badge ${on ? 'on' : 'off'}">${on ? d.on : d.off}</span>`;
+  });
+  const badge = el('calib-mcu-badge');
+  badge.textContent = raw.calib_loaded ? 'MCU 已同步' : 'MCU 未同步';
+  badge.className = `calib-badge ${raw.calib_loaded ? 'on' : 'off'}`;
+}
+
+function updateCalibOutputs(inputs) {
+  AI_DEFS.forEach(d => {
+    const v = inputs[d.key];
+    if (v !== undefined) el(`calout-${d.key}`).textContent = d.fmt(v);
+  });
+}
+
+function collectCalib() {
+  const out = { ai: {}, di: {} };
+  let valid = true;
+  AI_DEFS.forEach(d => {
+    const row = el('calib-ai-table').querySelector(`tr[data-ai="${d.key}"]`);
+    const get = k => parseInt(row.querySelector(`.cal-inp[data-k="${k}"]`).value, 10);
+    const a = { min: get('min'), ctr: get('ctr'), max: get('max'), rev: row.querySelector('.cal-rev').checked };
+    if ([a.min, a.ctr, a.max].some(Number.isNaN) || a.max <= a.min ||
+        (a.ctr !== 0 && !(a.min < a.ctr && a.ctr < a.max))) {
+      valid = false;
+      row.classList.add('invalid');
+      setTimeout(() => row.classList.remove('invalid'), 2000);
+    }
+    out.ai[d.key] = a;
+  });
+  DI_DEFS.forEach(d => {
+    out.di[d.key] = el('calib-di-table').querySelector(`tr[data-di="${d.key}"] .cal-inv`).checked;
+  });
+  return valid ? out : null;
+}
+
+el('calib-save').addEventListener('click', () => {
+  const cal = collectCalib();
+  if (!cal) {
+    setCalibMsg('數值無效：需 最小 < 中點 < 最大（中點可填 0 自動取中）', 'err');
+    return;
+  }
+  socket.emit('set_calib', cal);
+  setCalibMsg('儲存中…', 'pending');
+});
+
+el('calib-reset').addEventListener('click', () => {
+  if (!window.confirm('確定要還原為預設校正值？')) return;
+  socket.emit('set_calib', { reset: true });
+  setCalibMsg('還原中…', 'pending');
+});
+
+socket.on('calib_result', ({ ok, msg, calib }) => {
+  setCalibMsg(msg || (ok ? '完成' : '失敗'), ok ? 'ok' : 'err');
+  if (ok) {
+    _calibDirty = false;
+    if (calib) updateCalibFields(calib);
+    setTimeout(() => { if (!_calibDirty) setCalibMsg('', ''); }, 4000);
+  }
+});
+
+buildCalibTables();

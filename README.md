@@ -300,8 +300,9 @@ MCU 與 MPU 之間透過 `Arduino_RouterBridge`（基於 RPClite + MsgPack）進
 
 | 方向 | 方法名稱 | 類型 | 頻率 | 內容 |
 |------|---------|------|:----:|------|
-| MCU → MPU | `on_inputs` | `notify`（單向） | 10 Hz + 邊緣觸發 | steering, left_thr, right_thr, l_eng_state, l_eng_edge, r_eng_state, r_eng_edge, ctrl_edge, estop_state |
-| MPU → MCU | `update_display` | `call`（雙向 RPC） | 5 Hz | speed_x10, heading, bat, gps_fix, armed, mode, lat_e7, lon_e7, remote_ip, remote_port, local_ip, local_port, control_authority |
+| MCU → MPU | `on_inputs` | `notify`（單向） | 10 Hz + 邊緣觸發 | steering, left_thr, right_thr, l_eng_state, l_eng_edge, r_eng_state, r_eng_edge, ctrl_edge, estop_state, mode_sw_acro, raw_steer, raw_lthr, raw_rthr, di_raw, di_state, calib_loaded |
+| MPU → MCU | `update_display` | `call`（雙向 RPC） | 5 Hz | speed_x10, heading, bat, gps_fix, armed, mode, lat_e7, lon_e7, remote_ip, remote_port, local_ip, local_port, control_authority, link_ok |
+| MPU → MCU | `set_calib` | `call`（雙向 RPC） | 開機同步／網頁儲存時／MCU 重開機後重送 | 3 組 AI（min, ctr, max, rev）＋ DI 反向位元遮罩，見〈網頁輸入校正〉 |
 
 **`on_inputs` 參數：**
 
@@ -314,6 +315,10 @@ MCU 與 MPU 之間透過 `Arduino_RouterBridge`（基於 RPClite + MsgPack）進
 | `ctrl_edge` | int | 控制權按鈕手勢（見下表） |
 | `estop_state` | int | 0=正常 1=急停按鈕拍下中 |
 | `mode_sw_acro` | int | 模式開關位置 0=手動 1=定向（只送現況，MPU 端比對前值判斷變化） |
+| `raw_steer` / `raw_lthr` / `raw_rthr` | int | A0 / A1 / A2 的 ADC 原始值 0–1023（校正頁擷取端點用） |
+| `di_raw` | int | 5 路 DI 的實際腳位電平位元遮罩（HIGH=1；bit0 引擎啟 bit1 引擎關 bit2 控制權 bit3 急停 bit4 模式） |
+| `di_state` | int | 同上位元順序，消抖後的邏輯狀態（active=1） |
+| `calib_loaded` | int | 0=MCU 仍使用開機預設校正（MPU 見到 0 會重送 `set_calib`） |
 
 **引擎開關動作（`EDGE_*`）：**
 
@@ -352,7 +357,8 @@ MCU 與 MPU 之間透過 `Arduino_RouterBridge`（基於 RPClite + MsgPack）進
   │
   ▼ 50Hz (sketch loop)
 M4 analogRead()
-  │ map(0–1023 → 範圍)
+  │ ai_map()：依校正表 min/ctr/max 分段線性映射、rev 反向
+  │ （預設值寫在 sketch，網頁校正頁可改，經 set_calib 下發）
   ▼
 steering  : -1000 … +1000
 left_thr  :  1000 … 2000 μs
@@ -732,11 +738,14 @@ usv_controller/
 ### 各檔案職責
 
 #### `sketch/sketch.ino`
-- 使用 `analogRead()` 讀取三路可變電阻 ADC
-- `DebouncedInput` 對四路數位輸入做 25 ms 消抖與邊緣偵測
+- 使用 `analogRead()` 讀取三路類比輸入，經 `ai_map()` 依校正表（`AiCal` min/ctr/max/rev）映射
+- `DebouncedInput` 對五路數位輸入做 25 ms 消抖與邊緣偵測，`invert` 旗標可由校正頁反向
+- `set_calib()` RPC 接收 MPU 下發的 AI/DI 校正；`db_set_invert()` 切換反向時同步消抖狀態，
+  避免設定瞬間憑空產生邊緣（否則反轉引擎啟動那一路會立刻被當成撥上）
 - 控制權按鈕的長／短按判別（`CTRL_HOLD_MS` = 2000 ms）
 - 急停觸發時**本地立即歸零**推桿值，不等 MPU 回應
-- 以 `Bridge.notify("on_inputs", ...)` 推送 9 個輸入參數到 MPU（10 Hz，邊緣時立即觸發）
+- 以 `Bridge.notify("on_inputs", ...)` 推送 16 個參數到 MPU（10 Hz，邊緣時立即觸發），
+  含 ADC 原始值、DI 腳位電平與 `calib_loaded` 供網頁校正頁使用
 - 提供 `update_display()` RPC 方法供 MPU 呼叫以更新 LCD
 - 以 5 Hz 刷新 ILI9341 LCD 畫面
 
@@ -763,7 +772,11 @@ usv_controller/
   （`_arm_cmd_state` 追蹤本地意圖，避免重複下令）
 - 控制權按鈕手勢 → `mavlink.send_request_operator_control()`
 - `_blocked_by_estop()` 守衛所有網頁控制端點
-- `loop()` 每 200 ms 呼叫 `Bridge.call("update_display", ...)` 推送船舶狀態到 LCD
+- 輸入校正：`_load_calib()` / `_save_calib()` 讀寫 `python/input_calib.json`，
+  `_sanitize_calib()` 夾限範圍，`_push_calib()` 以 `Bridge.call("set_calib", ...)` 下發 MCU；
+  `_handle_set_calib()` 於 ARMED、引擎 ON 或急停閂鎖時拒絕修改
+- `loop()` 每 200 ms 呼叫 `Bridge.call("update_display", ...)` 推送船舶狀態到 LCD，
+  並在 `_calib_push_pending` 時（開機、網頁儲存、MCU 回報 `calib_loaded=0`）重送校正
 
 #### `python/mavlink_handler.py`
 - 連線管理：`connect()` / `disconnect()` / `reconnect()`
@@ -905,12 +918,39 @@ CONTROL_FAILSAFE_S = 1.0   # 秒，控制信號中斷後自動歸零的等待時
 
 ### ADC 值映射對照
 
-| 硬體輸入 | ADC 原始值 | 映射後 | 用途 |
+| 硬體輸入 | ADC 原始值（預設校正端點） | 映射後 | 用途 |
 |---------|:---------:|:------:|------|
-| 方向盤（A0） | 0–1023 | -1000 … +1000 | RouterBridge `steering` 參數 |
+| 方向盤（A0） | 0–1023，預設**反向**（電位計接線與舵向相反） | -1000（左）… +1000（右），LCD 顯示 ±40 度 | RouterBridge `steering` 參數 |
 | 方向盤 | -1000 … +1000 | 1000–2000 μs | MAVLink CH1（`1500 + val/2`） |
-| 左油門（A1） | 0–1023 | 1000–2000 μs | RouterBridge `left_thr` / MAVLink CH3（受左引擎閘門） |
-| 右油門（A2） | 0–1023 | 1000–2000 μs | RouterBridge `right_thr` / MAVLink CH4（受右引擎閘門） |
+| 左油門（A1） | 266–1023（推桿實測行程 26%~100%） | 1000–2000 μs，LCD 顯示 -100% … +100% | RouterBridge `left_thr` / MAVLink CH3（受左引擎閘門） |
+| 右油門（A2） | 225–1023（推桿實測行程 22%~100%） | 1000–2000 μs，LCD 顯示 -100% … +100% | RouterBridge `right_thr` / MAVLink CH4（受右引擎閘門） |
+
+端點值只是開機預設，實際以〈網頁輸入校正〉儲存的 `python/input_calib.json` 為準。
+
+### 網頁輸入校正（AI 比例轉換／反向、DI 反向）
+
+網頁主控台中央欄「Input Calibration 輸入校正」可展開設定，不必重新燒錄 sketch：
+
+| 項目 | 可設定內容 | 說明 |
+|------|-----------|------|
+| AI 方向盤 / 左油門 / 右油門 | 最小、中點、最大（ADC 0–1023）、反向 | 轉到端點按「取」即擷取當下 ADC 原始值；中點填 0 表示自動取 min/max 中點；`ai_map()` 以中點分兩段線性映射，確保中立點準確落在 0 / 1500 μs |
+| DI 引擎啟動 / 引擎關閉 / 控制權 / 急停 / 模式 | 反向 | 顛倒該路開關的 ON/OFF 判定；表格即時顯示腳位電平（HIGH/LOW）與消抖後邏輯狀態。急停預設 NC 常閉接法（斷線即觸發），反向後會失去此 fail-safe，介面以 ⚠ 提示 |
+
+**資料流：**
+
+```
+瀏覽器「儲存並套用」 ──socket "set_calib"──▶ main.py _handle_set_calib()
+                                              │ 拒絕條件：ARMED／引擎開關 ON／急停閂鎖
+                                              ├─ _sanitize_calib() 夾限 → 寫入 python/input_calib.json
+                                              └─ Bridge.call("set_calib", 13 個 int) ──▶ sketch set_calib()
+                                                                                          ├─ 覆寫 cal_steer / cal_lthr / cal_rthr
+                                                                                          ├─ db_set_invert() 逐路套用 DI 反向
+                                                                                          └─ g_calib_loaded = true
+MCU 每 100 ms on_inputs 回報 raw ADC、di_raw、di_state、calib_loaded
+  └─ calib_loaded=0（MCU 剛重開機）→ main.py 自動重送 set_calib，校正不會因 MCU 重置而遺失
+```
+
+校正在 MCU 端套用，因此 LCD 顯示、本機急停歸零邏輯與送往船端的 RC 值使用同一套映射。
 
 ### 操作流程
 

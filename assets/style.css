@@ -1086,3 +1086,141 @@ button:active {
   stroke-width: 4;
   stroke-linecap: round;
 }
+
+/* ── Input Calibration panel ─────────────────────────────────────────────── */
+.calib-details {
+  margin-top: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.calib-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.calib-summary::-webkit-details-marker { display: none; }
+
+.calib-summary::before {
+  content: '▸';
+  color: var(--text-dim);
+  margin-right: 6px;
+}
+
+.calib-details[open] .calib-summary::before { content: '▾'; }
+
+.calib-badge {
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.calib-badge.on  { color: var(--green); border-color: var(--green); }
+.calib-badge.off { color: var(--text-dim); }
+
+.calib-note {
+  padding: 0 12px 10px;
+  font-size: 0.74rem;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+
+.calib-note b { color: var(--text); }
+
+.calib-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+  margin: 0 0 10px;
+}
+
+.calib-table th,
+.calib-table td {
+  padding: 5px 6px;
+  border-top: 1px solid var(--border);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.calib-table th {
+  color: var(--text-dim);
+  font-weight: 600;
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.calib-name { white-space: nowrap; color: var(--text-hi); }
+
+.calib-raw {
+  font-family: Consolas, 'Courier New', monospace;
+  color: var(--yellow);
+  min-width: 52px;
+}
+
+.calib-out {
+  font-family: Consolas, 'Courier New', monospace;
+  color: var(--green);
+  white-space: nowrap;
+}
+
+.calib-center { text-align: center; }
+
+.calib-warn { color: var(--orange); cursor: help; margin-left: 4px; }
+
+.cap-cell {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.cap-cell .cal-inp {
+  width: 68px;
+  margin-top: 0;
+  padding: 5px 6px;
+  font-size: 0.78rem;
+  text-align: right;
+}
+
+.cal-inp.captured {
+  border-color: var(--green);
+  box-shadow: 0 0 0 2px rgba(0, 255, 102, 0.25);
+}
+
+.cap-btn {
+  flex-shrink: 0;
+  padding: 5px 8px;
+  background: #2A2A34;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 0.74rem;
+}
+
+.cap-btn:hover { background: #3a3a48; color: var(--text-hi); }
+
+.calib-table tr.invalid td { background: rgba(204, 51, 0, 0.18); }
+
+.switch.small { transform: scale(0.8); transform-origin: center; }
+
+.calib-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px 12px;
+  flex-wrap: wrap;
+}
+
+.calib-msg { font-size: 0.76rem; }
+.calib-msg.ok      { color: var(--green); }
+.calib-msg.err     { color: var(--red); }
+.calib-msg.pending { color: var(--yellow); }
