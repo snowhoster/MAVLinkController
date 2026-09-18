@@ -788,7 +788,6 @@
 <a href="#3d-views" style="text-decoration:none;"><div class="badge" style="border-color:#8b5cf6; background:#4c1d95; color:#f5f3ff;"><div class="dot" style="background:#a78bfa"></div>📐 外殼與電路板 3D 裝配關係圖</div></a>
 <a href="#visual-bom" style="text-decoration:none;"><div class="badge" style="border-color:#0284c7; background:#0c4a6e; color:#f0f9ff;"><div class="dot" style="background:#38bdf8"></div>📸 實物零件照片圖鑑與台灣採購來源</div></a>
     <a href="#fw-pinmap" style="text-decoration:none;"><div class="badge" style="border-color:#6366f1; background:#312e81; color:#eef2ff;"><div class="dot" style="background:#818cf8"></div>🔗 韌體腳位 ↔ 官方 Pinout ↔ MCU 腳名對照表</div></a>
-    <a href="#knob-harness" style="text-decoration:none;"><div class="badge" style="border-color:#a78bfa; background:#3b0764; color:#f5f3ff;"><div class="dot" style="background:#c4b5fd"></div>🎛️ 雙操舵旋鈕面板內線束圖</div></a>
     <a href="#perfboard-sop" style="text-decoration:none;"><div class="badge" style="border-color:#10b981; background:#064e3b; color:#ecfdf5;"><div class="dot" style="background:#10b981"></div>🛠️ 洞洞板內部零件焊接分解SOP</div></a>
     <a href="#external-sop" style="text-decoration:none;"><div class="badge" style="border-color:#f59e0b; background:#78350f; color:#fef3c7;"><div class="dot" style="background:#f59e0b"></div>🔩 外部零件面板安裝分解SOP</div></a>
     <div class="badge"><div class="dot" style="background:var(--pwr-5v)"></div>5V 主電源 (外部 18650 UPS 經 Type-C 直插 UNO Q，由 5V 針腳轉供推桿)</div>
@@ -939,7 +938,7 @@
       <!-- 2. Left Switch Column (x = 225) -->
       <g transform="translate(225, 0)">
         <text class="t-main" x="0" y="125" font-size="10.5" text-anchor="middle">MTS/GQ16 開關排</text>
-        <text class="t-sub" x="0" y="139" font-size="9" text-anchor="middle">(舵輪/模式/引擎/權限)</text>
+        <text class="t-sub" x="0" y="139" font-size="9" text-anchor="middle">(模式/引擎/權限)</text>
         <rect x="-10" y="178" width="20" height="12" fill="#cbd5e1" stroke="#000" stroke-width="1" />
         <line x1="0" y1="178" x2="-6" y2="152" stroke="#94a3b8" stroke-width="4.5" stroke-linecap="round" />
         <!-- Sinking body -->
@@ -947,9 +946,9 @@
         <text class="t-sub" x="0" y="232" font-size="8" text-anchor="middle">螺母鎖固</text>
       </g>
 
-      <!-- 3. Left Steering Knob (x = 360) -->
+      <!-- 3. Steering Knob (x = 360) -->
       <g transform="translate(360, 0)">
-        <text class="t-accent" x="0" y="125" font-size="11" text-anchor="middle">🎛️ 左操舵旋鈕</text>
+        <text class="t-accent" x="0" y="125" font-size="11" text-anchor="middle">🎛️ 方向盤旋鈕</text>
         <text class="t-sub" x="0" y="139" font-size="9" text-anchor="middle">Φ15mm 音響旋鈕</text>
         <rect x="-26" y="186" width="52" height="4" fill="#0f172a" />
         <rect x="-15" y="154" width="30" height="34" rx="3" fill="#475569" stroke="#000" stroke-width="1.5" />
@@ -989,18 +988,6 @@
         </g>
       </g>
 
-      <!-- 5. Right Steering Knob (x = 840) -->
-      <g transform="translate(840, 0)">
-        <text class="t-accent" x="0" y="125" font-size="11" text-anchor="middle">🎛️ 右操舵旋鈕</text>
-        <text class="t-sub" x="0" y="139" font-size="9" text-anchor="middle">Φ15mm 音響旋鈕 (備用)</text>
-        <rect x="-26" y="186" width="52" height="4" fill="#0f172a" />
-        <rect x="-15" y="154" width="30" height="34" rx="3" fill="#475569" stroke="#000" stroke-width="1.5" />
-        <line x1="0" y1="156" x2="0" y2="186" stroke="#fff" stroke-width="2" />
-        <!-- Sinking body -->
-        <rect x="-16" y="206" width="32" height="36" fill="#1e293b" stroke="#38bdf8" stroke-width="1.2" />
-        <text class="t-accent" x="0" y="228" font-size="8" text-anchor="middle">直供 3.3V</text>
-      </g>
-
       <!-- 6. Right Wing Grip & Power LEDs (x = 1060) -->
       <g transform="translate(1060, 0)">
         <text class="t-main" x="0" y="125" font-size="11" text-anchor="middle">右手握把 ＆ 電源燈</text>
@@ -1027,7 +1014,7 @@
         <rect x="-350" y="-14" width="700" height="30" rx="4" fill="#f8fafc" stroke="#0284c7" stroke-width="1.8" />
         <g font-size="9" font-weight="700" text-anchor="middle">
           <rect x="-345" y="-10" width="105" height="22" fill="#e0f2fe" /><text x="-292" y="5" fill="#0369a1">CON 1: LCD (8P)</text>
-          <rect x="-235" y="-10" width="70" height="22" fill="#ecfdf5" /><text x="-200" y="5" fill="#047857">CON 2A 舵輪</text>
+          <rect x="-235" y="-10" width="70" height="22" fill="#ecfdf5" /><text x="-200" y="5" fill="#047857">CON 2A 方向盤</text>
           <rect x="-160" y="-10" width="70" height="22" fill="#fef2f2" /><text x="-125" y="5" fill="#b91c1c">CON 2B 左推</text>
           <rect x="-85" y="-10" width="70" height="22" fill="#fef2f2" /><text x="-50" y="5" fill="#b91c1c">CON 2C 右推</text>
           <rect x="-10" y="-10" width="65" height="22" fill="#fffbeb" /><text x="22" y="5" fill="#b45309">CON 2D 引擎</text>
@@ -1229,8 +1216,8 @@
 
   <div class="page-section">
     <div class="page-title-banner">
-      <h2>📄 第一頁 (B)：USV 遙控器實物硬體配線總覽圖 (含外置 18650 UPS 電池倉、中間 3.2" LCD ＆ 雙 APEM 推桿、左右雙方向盤轉輪)</h2>
-      <span>人因工學佈局 ｜ 中間上方 3.2 吋 LCD ｜ 中間下方雙推桿 ｜ 左右對稱雙方向盤 ｜ 左上角急停 ｜ 左側垂直平均開關排</span>
+      <h2>📄 第一頁 (B)：USV 遙控器實物硬體配線總覽圖 (含外置 18650 UPS 電池倉、中間 3.2" LCD ＆ 雙 APEM 推桿、左側方向盤旋鈕)</h2>
+      <span>人因工學佈局 ｜ 中間上方 3.2 吋 LCD ｜ 中間下方雙推桿 ｜ 左側方向盤旋鈕 ｜ 左上角急停 ｜ 左側垂直平均開關排</span>
     </div>
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1360 1620" width="1360" height="1620">
 <defs>
@@ -1302,8 +1289,8 @@
         <circle cx="18" cy="522" r="4.5" fill="#1e293b" stroke="#94a3b8" stroke-width="1.2"/>
         <circle cx="1262" cy="522" r="4.5" fill="#1e293b" stroke="#94a3b8" stroke-width="1.2"/>
 
-        <text x="24" y="28" fill="#93c5fd" font-size="15" font-weight="bold">【外殼頂部操作面板】(Top Control Panel — 依使用者需求重構：中央儀表油門 ＋ 左右雙舵輪 ＋ 左側垂直控制排)</text>
-        <text x="24" y="45" fill="#64748b" font-size="11">中間上方 3.2" LCD ｜ 中間下方雙油門推桿 ｜ 左側左方向盤 ｜ 右側右方向盤 ｜ 方向盤切換開關 ｜ 左上角急停 ｜ 左側垂直平均開關排</text>
+        <text x="24" y="28" fill="#93c5fd" font-size="15" font-weight="bold">【外殼頂部操作面板】(Top Control Panel — 中央儀表油門 ＋ 左側方向盤 ＋ 左側垂直控制排)</text>
+        <text x="24" y="45" fill="#64748b" font-size="11">中間上方 3.2" LCD ｜ 中間下方雙油門推桿 ｜ 左側方向盤 ｜ 左上角急停 ｜ 左側垂直平均開關排</text>
 
         <!-- ────────────────────────────────────────────────────────────── -->
         <!-- ZONE 1: 左上角【安全緊急停止開關】(LA16-11ZS 16mm 蘑菇頭 NC 常閉) -->
@@ -1328,22 +1315,11 @@
 
         <!-- ────────────────────────────────────────────────────────────── -->
         <!-- ZONE 2: 左側垂直開關列（緊接急停下方，平均間距排列）             -->
-        <!-- 4 組開關均勻間距：y=154, y=244, y=334, y=424 (間距 90px)        -->
+        <!-- 3 組開關均勻間距：y=154, y=244, y=334 (間距 90px)               -->
         <!-- ────────────────────────────────────────────────────────────── -->
         
-        <!-- 開關 1: 方向盤切換開關 (Steering Select: Left / Right) -->
-        <g id="real-toggle-steer-sel" transform="translate(25, 154)">
-          <rect x="0" y="0" width="135" height="80" rx="8" fill="#1b1c2e" stroke="#a855f7" stroke-width="1.8"/>
-          <circle cx="35" cy="40" r="16" fill="#94a3b8" stroke="#cbd5e1" stroke-width="1.5"/>
-          <line x1="35" y1="40" x2="25" y2="20" stroke="#f1f5f9" stroke-width="4.5" stroke-linecap="round"/>
-          <text x="58" y="28" fill="#c084fc" font-size="11" font-weight="bold">🔄 旋鈕切換</text>
-          <text x="58" y="44" fill="#a855f7" font-size="8.5">MTS-102 SPDT</text>
-          <text x="58" y="58" fill="#e9d5ff" font-size="8">撥上: ⬅️左操舵旋鈕</text>
-          <text x="58" y="71" fill="#cbd5e1" font-size="8">撥下: ➡️右操舵旋鈕</text>
-        </g>
-
-        <!-- 開關 2: 模式切換開關 (Mode Select: ACRO / MANUAL) -->
-        <g id="real-toggle-mts102" transform="translate(25, 244)">
+        <!-- 開關 1: 模式切換開關 (Mode Select: ACRO / MANUAL) -->
+        <g id="real-toggle-mts102" transform="translate(25, 154)">
           <rect x="0" y="0" width="135" height="80" rx="8" fill="#1e293b" stroke="#38bdf8" stroke-width="1.8"/>
           <circle cx="35" cy="40" r="16" fill="#94a3b8" stroke="#cbd5e1" stroke-width="1.5"/>
           <line x1="35" y1="40" x2="26" y2="18" stroke="#f1f5f9" stroke-width="4.5" stroke-linecap="round"/>
@@ -1353,8 +1329,8 @@
           <text x="58" y="71" fill="#cbd5e1" font-size="8">撥下: 手動(MANUAL)</text>
         </g>
 
-        <!-- 開關 3: 引擎啟閉三段瞬態搖頭開關 (MTS-123 (ON)-OFF-(ON)) -->
-        <g id="real-toggle-mts123" transform="translate(25, 334)">
+        <!-- 開關 2: 引擎啟閉三段瞬態搖頭開關 (MTS-123 (ON)-OFF-(ON)) -->
+        <g id="real-toggle-mts123" transform="translate(25, 244)">
           <rect x="0" y="0" width="135" height="80" rx="8" fill="#14231d" stroke="#10b981" stroke-width="1.8"/>
           <circle cx="35" cy="40" r="16" fill="#94a3b8" stroke="#cbd5e1" stroke-width="2"/>
           <rect x="31" y="16" width="8" height="24" rx="2.5" fill="#e2e8f0" stroke="#64748b"/>
@@ -1364,8 +1340,8 @@
           <text x="58" y="71" fill="#fca5a5" font-size="8">撥下: 熄火(DISARM)</text>
         </g>
 
-        <!-- 開關 4: 控制權按鈕 (GQ16H-10 16mm 平頭金屬防水按鈕) -->
-        <g id="real-button-gq16" transform="translate(25, 424)">
+        <!-- 開關 3: 控制權按鈕 (GQ16H-10 16mm 平頭金屬防水按鈕) -->
+        <g id="real-button-gq16" transform="translate(25, 334)">
           <rect x="0" y="0" width="135" height="80" rx="8" fill="#1e293b" stroke="#64748b" stroke-width="1.8"/>
           <circle cx="35" cy="40" r="20" fill="#64748b" stroke="#94a3b8" stroke-width="2"/>
           <circle cx="35" cy="40" r="14" fill="#0284c7" opacity="0.85"/>
@@ -1377,11 +1353,11 @@
         </g>
 
         <!-- ────────────────────────────────────────────────────────────── -->
-        <!-- ZONE 3: 左邊【左方向盤轉輪】(Left Steering Wheel WH148 B10K)      -->
+        <!-- ZONE 3: 左邊【方向盤旋鈕】(Steering Knob WH148 B10K)             -->
         <!-- ────────────────────────────────────────────────────────────── -->
         <g id="real-wheel-left" transform="translate(180, 100)">
           <rect x="0" y="0" width="220" height="340" rx="12" fill="#111827" stroke="#38bdf8" stroke-width="2" filter="url(#shadow)"/>
-          <text x="110" y="26" fill="#38bdf8" font-size="13" font-weight="bold" text-anchor="middle">🎛️ 左操舵旋鈕 (調音台旋鈕)</text>
+          <text x="110" y="26" fill="#38bdf8" font-size="13" font-weight="bold" text-anchor="middle">🎛️ 方向盤旋鈕 (WH148 B10K)</text>
           <text x="110" y="42" fill="#94a3b8" font-size="8.8" text-anchor="middle">Φ15mm×H13mm 調音台旋鈕帽 ｜ WH148 B10K</text>
           
           <!-- Outer Panel Dial Scale Ring -->
@@ -1460,12 +1436,12 @@
           <circle cx="96" cy="169" r="2.8" fill="#f59e0b" stroke="#000" stroke-width="0.8"/>
           <text x="110" y="254" fill="#f8fafc" font-size="9.5" font-weight="bold" text-anchor="middle">Φ15mm 調音台防滑旋鈕</text>
           <text x="110" y="270" fill="#a7f3d0" font-size="8.5" text-anchor="middle">直槽防滑條紋 ｜ 6mm花軸緊配合</text>
-          <text x="110" y="285" fill="#38bdf8" font-size="8" text-anchor="middle">信號送至旋鈕切換開關 Pin 1</text>
+          <text x="110" y="285" fill="#38bdf8" font-size="8" text-anchor="middle">Wiper 訊號直入 Arduino A0</text>
 
           <!-- Wiring Badge -->
           <g transform="translate(25, 302)">
             <rect x="0" y="0" width="170" height="24" rx="4" fill="#0f172a" stroke="#0284c7" stroke-width="1.2"/>
-            <text x="85" y="16" fill="#38bdf8" font-size="8.5" font-weight="bold" text-anchor="middle">3.3V ｜ Wiper_L ｜ GND</text>
+            <text x="85" y="16" fill="#38bdf8" font-size="8.5" font-weight="bold" text-anchor="middle">3.3V ｜ Wiper ｜ GND</text>
           </g>
         </g>
 
@@ -1492,13 +1468,11 @@
           <text x="30" y="76" fill="#cbd5e1" font-size="10.5">電量: <tspan fill="#4ade80" font-weight="bold">98% (12.4V)</tspan> ｜ 模式: <tspan fill="#38bdf8" font-weight="bold">手動 (MANUAL)</tspan></text>
           <text x="30" y="96" fill="#cbd5e1" font-size="10.5">引擎: <tspan fill="#4ade80" font-weight="bold">ARMED (雙發運轉)</tspan> ｜ 控制權: <tspan fill="#4ade80">GRANTED</tspan></text>
 
-          <!-- ACTIVE STEERING WHEEL HIGHLIGHT BOX -->
-          <rect x="28" y="108" width="374" height="26" rx="4" fill="#1b1c2e" stroke="#a855f7" stroke-width="1.5"/>
-          <text x="40" y="125" fill="#c084fc" font-size="10.5" font-weight="bold">🔄 啟用舵輪：</text>
-          <rect x="110" y="112" width="130" height="18" rx="3" fill="#064e3b" stroke="#10b981" stroke-width="1"/>
-          <text x="175" y="125" fill="#a7f3d0" font-size="9.5" font-weight="bold" text-anchor="middle">⬅️ 左操舵旋鈕生效 [L]</text>
-          <rect x="250" y="112" width="140" height="18" rx="3" fill="#1e293b" stroke="#64748b" stroke-width="1"/>
-          <text x="320" y="125" fill="#94a3b8" font-size="9" text-anchor="middle">➡️ 右操舵旋鈕待命中 [R]</text>
+          <!-- RUDDER ANGLE READOUT BOX -->
+          <rect x="28" y="108" width="374" height="26" rx="4" fill="#1b1c2e" stroke="#38bdf8" stroke-width="1.5"/>
+          <text x="40" y="125" fill="#38bdf8" font-size="10.5" font-weight="bold">🎛️ 舵角：</text>
+          <text x="110" y="125" fill="#a7f3d0" font-size="10.5" font-weight="bold">+12度</text>
+          <text x="175" y="125" fill="#94a3b8" font-size="9">(方向盤 WH148 → A0，±40度 左負右正)</text>
 
           <!-- Throttle Output Bars on LCD -->
           <text x="30" y="152" fill="#cbd5e1" font-size="9.5">左推力 [==== 65% ] ｜ 右推力 [==== 65% ]</text>
@@ -1574,99 +1548,6 @@
         </g>
 
         <!-- ────────────────────────────────────────────────────────────── -->
-        <!-- ZONE 6: 右邊【右方向盤轉輪】(Right Steering Wheel WH148 B10K)     -->
-        <!-- ────────────────────────────────────────────────────────────── -->
-        <g id="real-wheel-right" transform="translate(880, 100)">
-          <rect x="0" y="0" width="220" height="340" rx="12" fill="#111827" stroke="#38bdf8" stroke-width="2" filter="url(#shadow)"/>
-          <text x="110" y="26" fill="#38bdf8" font-size="13" font-weight="bold" text-anchor="middle">🎛️ 右操舵旋鈕 (調音台旋鈕)</text>
-          <text x="110" y="42" fill="#94a3b8" font-size="8.8" text-anchor="middle">Φ15mm×H13mm 調音台旋鈕帽 ｜ WH148 B10K</text>
-          
-          <!-- Outer Panel Dial Scale Ring -->
-          <circle cx="110" cy="155" r="72" fill="#080d16" stroke="#1e293b" stroke-width="1.5"/>
-          
-          <!-- Degree marks & dots -->
-          <text x="110" y="72" fill="#38bdf8" font-size="9.5" font-weight="bold" text-anchor="middle">0° (正舵)</text>
-          <line x1="110" y1="76" x2="110" y2="83" stroke="#38bdf8" stroke-width="2"/>
-          
-          <circle cx="66" cy="92" r="2.5" fill="#94a3b8"/><text x="54" y="88" fill="#64748b" font-size="7.5">-30°</text>
-          <circle cx="154" cy="92" r="2.5" fill="#94a3b8"/><text x="166" y="88" fill="#64748b" font-size="7.5">+30°</text>
-          
-          <text x="48" y="159" fill="#94a3b8" font-size="8.5" text-anchor="middle">-45°</text>
-          <line x1="56" y1="155" x2="63" y2="155" stroke="#94a3b8" stroke-width="1.5"/>
-          
-          <text x="172" y="159" fill="#94a3b8" font-size="8.5" text-anchor="middle">+45°</text>
-          <line x1="157" y1="155" x2="164" y2="155" stroke="#94a3b8" stroke-width="1.5"/>
-
-          <!-- COMPACT 15mm MIXER KNOB CAP (Φ15mm x H13mm) -->
-          <!-- Outer fluted base (r=35) with shadow -->
-          <circle cx="110" cy="155" r="35" fill="#1e2530" stroke="#0f172a" stroke-width="1.5" filter="url(#shadow)"/>
-          <line x1="136.0" y1="155.0" x2="145.0" y2="155.0" stroke="#0b0f17" stroke-width="2.5" stroke-linecap="round"/>
-          <line x1="136.0" y1="155.0" x2="145.0" y2="155.0" stroke="#475569" stroke-width="1.2" stroke-linecap="round"/>
-          <line x1="134.4" y1="163.9" x2="142.9" y2="167.0" stroke="#0b0f17" stroke-width="2.5" stroke-linecap="round"/>
-          <line x1="134.4" y1="163.9" x2="142.9" y2="167.0" stroke="#475569" stroke-width="1.2" stroke-linecap="round"/>
-          <line x1="129.9" y1="171.7" x2="136.8" y2="177.5" stroke="#0b0f17" stroke-width="2.5" stroke-linecap="round"/>
-          <line x1="129.9" y1="171.7" x2="136.8" y2="177.5" stroke="#475569" stroke-width="1.2" stroke-linecap="round"/>
-          <line x1="123.0" y1="177.5" x2="127.5" y2="185.3" stroke="#0b0f17" stroke-width="2.5" stroke-linecap="round"/>
-          <line x1="123.0" y1="177.5" x2="127.5" y2="185.3" stroke="#475569" stroke-width="1.2" stroke-linecap="round"/>
-          <line x1="114.5" y1="180.6" x2="116.1" y2="189.5" stroke="#0b0f17" stroke-width="2.5" stroke-linecap="round"/>
-          <line x1="114.5" y1="180.6" x2="116.1" y2="189.5" stroke="#475569" stroke-width="1.2" stroke-linecap="round"/>
-          <line x1="105.5" y1="180.6" x2="103.9" y2="189.5" stroke="#0b0f17" stroke-width="2.5" stroke-linecap="round"/>
-          <line x1="105.5" y1="180.6" x2="103.9" y2="189.5" stroke="#475569" stroke-width="1.2" stroke-linecap="round"/>
-          <line x1="97.0" y1="177.5" x2="92.5" y2="185.3" stroke="#0b0f17" stroke-width="2.5" stroke-linecap="round"/>
-          <line x1="97.0" y1="177.5" x2="92.5" y2="185.3" stroke="#475569" stroke-width="1.2" stroke-linecap="round"/>
-          <line x1="90.1" y1="171.7" x2="83.2" y2="177.5" stroke="#0b0f17" stroke-width="2.5" stroke-linecap="round"/>
-          <line x1="90.1" y1="171.7" x2="83.2" y2="177.5" stroke="#475569" stroke-width="1.2" stroke-linecap="round"/>
-          <line x1="85.6" y1="163.9" x2="77.1" y2="167.0" stroke="#0b0f17" stroke-width="2.5" stroke-linecap="round"/>
-          <line x1="85.6" y1="163.9" x2="77.1" y2="167.0" stroke="#475569" stroke-width="1.2" stroke-linecap="round"/>
-          <line x1="84.0" y1="155.0" x2="75.0" y2="155.0" stroke="#0b0f17" stroke-width="2.5" stroke-linecap="round"/>
-          <line x1="84.0" y1="155.0" x2="75.0" y2="155.0" stroke="#475569" stroke-width="1.2" stroke-linecap="round"/>
-          <line x1="85.6" y1="146.1" x2="77.1" y2="143.0" stroke="#0b0f17" stroke-width="2.5" stroke-linecap="round"/>
-          <line x1="85.6" y1="146.1" x2="77.1" y2="143.0" stroke="#475569" stroke-width="1.2" stroke-linecap="round"/>
-          <line x1="90.1" y1="138.3" x2="83.2" y2="132.5" stroke="#0b0f17" stroke-width="2.5" stroke-linecap="round"/>
-          <line x1="90.1" y1="138.3" x2="83.2" y2="132.5" stroke="#475569" stroke-width="1.2" stroke-linecap="round"/>
-          <line x1="97.0" y1="132.5" x2="92.5" y2="124.7" stroke="#0b0f17" stroke-width="2.5" stroke-linecap="round"/>
-          <line x1="97.0" y1="132.5" x2="92.5" y2="124.7" stroke="#475569" stroke-width="1.2" stroke-linecap="round"/>
-          <line x1="105.5" y1="129.4" x2="103.9" y2="120.5" stroke="#0b0f17" stroke-width="2.5" stroke-linecap="round"/>
-          <line x1="105.5" y1="129.4" x2="103.9" y2="120.5" stroke="#475569" stroke-width="1.2" stroke-linecap="round"/>
-          <line x1="114.5" y1="129.4" x2="116.1" y2="120.5" stroke="#0b0f17" stroke-width="2.5" stroke-linecap="round"/>
-          <line x1="114.5" y1="129.4" x2="116.1" y2="120.5" stroke="#475569" stroke-width="1.2" stroke-linecap="round"/>
-          <line x1="123.0" y1="132.5" x2="127.5" y2="124.7" stroke="#0b0f17" stroke-width="2.5" stroke-linecap="round"/>
-          <line x1="123.0" y1="132.5" x2="127.5" y2="124.7" stroke="#475569" stroke-width="1.2" stroke-linecap="round"/>
-          <line x1="129.9" y1="138.3" x2="136.8" y2="132.5" stroke="#0b0f17" stroke-width="2.5" stroke-linecap="round"/>
-          <line x1="129.9" y1="138.3" x2="136.8" y2="132.5" stroke="#475569" stroke-width="1.2" stroke-linecap="round"/>
-          <line x1="134.4" y1="146.1" x2="142.9" y2="143.0" stroke="#0b0f17" stroke-width="2.5" stroke-linecap="round"/>
-          <line x1="134.4" y1="146.1" x2="142.9" y2="143.0" stroke="#475569" stroke-width="1.2" stroke-linecap="round"/>
-
-          <!-- Beveled Inner Ring -->
-          <circle cx="110" cy="155" r="26" fill="#181e28" stroke="#475569" stroke-width="1"/>
-          <circle cx="110" cy="155" r="24" fill="#0f172a"/>
-          
-          <!-- Inset Top Face Contrast Ring (from 1688 sample) -->
-          <circle cx="110" cy="155" r="19" fill="none" stroke="#e2e8f0" stroke-width="1.8" opacity="0.95"/>
-          <circle cx="110" cy="155" r="17.5" fill="#1e293b"/>
-
-          <!-- High-Precision White Pointer Line (Center to edge) -->
-          <line x1="110" y1="155" x2="110" y2="121" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" filter="url(#shadow)"/>
-          <line x1="110" y1="155" x2="110" y2="122" stroke="#38bdf8" stroke-width="1.2" stroke-linecap="round"/>
-
-          <!-- Center Axis Cap -->
-          <circle cx="110" cy="155" r="5" fill="#0b0f17" stroke="#64748b" stroke-width="1"/>
-          <circle cx="110" cy="155" r="2" fill="#94a3b8"/>
-
-          <!-- Anti-rotation Pin Indicator -->
-          <circle cx="124" cy="169" r="2.8" fill="#f59e0b" stroke="#000" stroke-width="0.8"/>
-          <text x="110" y="254" fill="#f8fafc" font-size="9.5" font-weight="bold" text-anchor="middle">Φ15mm 調音台防滑旋鈕</text>
-          <text x="110" y="270" fill="#a7f3d0" font-size="8.5" text-anchor="middle">直槽防滑條紋 ｜ 6mm花軸緊配合</text>
-          <text x="110" y="285" fill="#38bdf8" font-size="8" text-anchor="middle">信號送至旋鈕切換開關 Pin 2</text>
-
-          <!-- Wiring Badge -->
-          <g transform="translate(25, 302)">
-            <rect x="0" y="0" width="170" height="24" rx="4" fill="#0f172a" stroke="#0284c7" stroke-width="1.2"/>
-            <text x="85" y="16" fill="#38bdf8" font-size="8.5" font-weight="bold" text-anchor="middle">3.3V ｜ Wiper_R ｜ GND</text>
-          </g>
-        </g>
-
-        <!-- ────────────────────────────────────────────────────────────── -->
         <!-- ZONE 7: 右側手把握持區與系統狀態銘牌                             -->
         <!-- ────────────────────────────────────────────────────────────── -->
         <g id="right-wing-status" transform="translate(1125, 60)">
@@ -1688,12 +1569,12 @@
 
           <!-- Quick Reference Badge -->
           <rect x="12" y="275" width="106" height="105" rx="5" fill="#0f172a" stroke="#38bdf8" stroke-width="1"/>
-          <text x="65" y="292" fill="#38bdf8" font-size="9" font-weight="bold" text-anchor="middle">⚡ 雙操舵旋鈕切換工法</text>
-          <text x="18" y="310" fill="#cbd5e1" font-size="7.5">左/右舵輪 3.3V/GND</text>
-          <text x="18" y="324" fill="#cbd5e1" font-size="7.5">全板並聯共軌供電</text>
-          <text x="18" y="338" fill="#cbd5e1" font-size="7.5">Wiper 經切換開關</text>
-          <text x="18" y="352" fill="#34d399" font-size="7.5" font-weight="bold">選通訊號直入 A0</text>
-          <text x="18" y="366" fill="#a855f7" font-size="7.5">零延遲 ｜ 免改 code</text>
+          <text x="65" y="292" fill="#38bdf8" font-size="9" font-weight="bold" text-anchor="middle">⚡ 方向盤電位計接線</text>
+          <text x="18" y="310" fill="#cbd5e1" font-size="7.5">WH148 Pin1 → 3.3V</text>
+          <text x="18" y="324" fill="#cbd5e1" font-size="7.5">WH148 Pin3 → GND</text>
+          <text x="18" y="338" fill="#cbd5e1" font-size="7.5">Pin2 Wiper 0~3.3V</text>
+          <text x="18" y="352" fill="#34d399" font-size="7.5" font-weight="bold">直入 Arduino A0</text>
+          <text x="18" y="366" fill="#a855f7" font-size="7.5">100nF 濾波 ｜ 3P 出線</text>
 
           <!-- Lanyard Eyelet -->
           <circle cx="65" cy="415" r="12" fill="#0b0f17" stroke="#64748b" stroke-width="2"/>
@@ -1704,7 +1585,7 @@
         <!-- Bottom Wire Management Tips -->
         <rect x="25" y="502" width="1230" height="26" rx="5" fill="#0f172a" stroke="#334155"/>
         <text x="640" y="519" fill="#38bdf8" font-size="10" font-weight="bold" text-anchor="middle">
-          🛠️ 人因工學線束規範：左/右方向盤電位計 3.3V 與 GND 在面板內側直接並聯；兩組 Wiper 訊號線引至「方向盤切換開關」，選通後經 8mm 蛇皮網直連洞洞板 CON 2A！
+          🛠️ 人因工學線束規範：方向盤電位計 3.3V / Wiper / GND 三線經 8mm 蛇皮網直連洞洞板 CON 2A，與雙推桿 5V 訊號線分開走線避免耦合！
         </text>
       </g>
 
@@ -1730,7 +1611,7 @@
 
         <rect x="615" y="650" width="310" height="50" rx="12" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/>
         <text x="770" y="672" fill="#f8fafc" font-size="13" font-weight="bold" text-anchor="middle">8mm 黑色高密尼龍蛇皮網管</text>
-        <text x="770" y="688" fill="#93c5fd" font-size="9.5" text-anchor="middle">集束雙舵輪、切換開關、雙推桿、急停、模式、引擎等線束</text>
+        <text x="770" y="688" fill="#93c5fd" font-size="9.5" text-anchor="middle">集束方向盤、雙推桿、急停、模式、引擎等線束</text>
 
         <!-- Downward harness connector lines -->
         <path d="M 710 705 L 257 865" stroke="#00e5ff" stroke-width="2.5" stroke-dasharray="4,3"/>
@@ -1774,7 +1655,7 @@
         <g transform="translate(165, 15)">
           <rect x="0" y="0" width="105" height="48" rx="4" fill="#ffffff" stroke="#00e5ff" stroke-width="2"/>
           <rect x="37" y="42" width="30" height="6" fill="#0284c7"/>
-          <text x="52" y="20" fill="#0f172a" font-size="10" font-weight="bold" text-anchor="middle">CON 2A: 雙操舵旋鈕選通</text>
+          <text x="52" y="20" fill="#0f172a" font-size="10" font-weight="bold" text-anchor="middle">CON 2A: 方向盤電位計</text>
           <text x="52" y="34" fill="#0077b6" font-size="8" text-anchor="middle">XH2.54 3P (A0)</text>
           <circle cx="22" cy="40" r="3.5" fill="#f59e0b" stroke="#fff" stroke-width="0.8"/>
           <circle cx="52" cy="40" r="3.5" fill="#00e5ff" stroke="#fff" stroke-width="0.8"/>
@@ -2194,135 +2075,6 @@
 
   </div>
 
-
-  <!-- ====================================================================== -->
-  <!-- 第一頁 (C)：雙操舵旋鈕面板內線束接線圖 -->
-  <!-- ====================================================================== -->
-  <div class="page-section" id="knob-harness">
-    <div class="page-title-banner">
-      <h2>🎛️ 第一頁 (C)：雙操舵旋鈕「面板內側線束」接線圖</h2>
-      <span>左/右 WH148 並聯供電 ｜ Wiper 經 MTS-102 選通 ｜ 單一 CON 2A 出線 ｜ 洞洞板不參與切換</span>
-    </div>
-    <p style="color:#94a3b8; font-size:12.5px; line-height:1.9; margin:0 0 12px;">
-      一個常見的誤解：洞洞板上只有 <b>CON 2A 一個 3P 接頭</b>，並不代表只接得了一顆旋鈕。
-      左右兩顆 WH148 的 <b>Pin 1 (3.3V)</b> 與 <b>Pin 3 (GND)</b> 在面板內側直接並聯，
-      兩組 <b>Pin 2 (Wiper)</b> 分別進入舵輪切換開關的上 / 下接點，
-      只有開關中央的 <b>COM</b>（選通後的訊號）才出線到洞洞板。
-      因此出線永遠只有三條：3.3V / OUT / GND。
-    </p>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 760" width="1280" height="760">
-  <rect x="0" y="0" width="1280" height="760" fill="#0b0f17"/>
-  <text x="640" y="26" fill="#38bdf8" font-size="16" font-weight="bold" text-anchor="middle">【雙操舵旋鈕 — 操作面板內側線束接線圖】（為何洞洞板只看得到一個接頭）</text>
-  <text x="640" y="46" fill="#94a3b8" font-size="11" text-anchor="middle">左右兩顆 WH148 並聯供電，兩組 Wiper 經 MTS-102 選通後才出線 —— 選擇動作全部在面板內完成，MCU 並不知情</text>
-  <rect x="28" y="62" width="890" height="600" rx="12" fill="#150e2a" stroke="#a78bfa" stroke-width="2" stroke-dasharray="9,5"/>
-  <text x="50" y="86" fill="#a78bfa" font-size="13" font-weight="bold" text-anchor="start">【操作面板內側】以下全部在面板上完成，洞洞板上看不到</text>
-  <rect x="946" y="262" width="326" height="380" rx="12" fill="#07140d" stroke="#10b981" stroke-width="2"/>
-  <text x="1109" y="286" fill="#34d399" font-size="13" font-weight="bold" text-anchor="middle">【洞洞板】</text>
-  <circle cx="200" cy="175" r="36" fill="#1e293b" stroke="#cbd5e1" stroke-width="2"/>
-  <circle cx="200" cy="175" r="27" fill="#0f172a" stroke="#64748b" stroke-width="1"/>
-  <line x1="200" y1="175" x2="200" y2="151" stroke="#f8fafc" stroke-width="3" stroke-linecap="round"/>
-  <text x="200" y="123" fill="#e2e8f0" font-size="12.5" font-weight="bold" text-anchor="middle">⬅️ 左操舵旋鈕</text>
-  <text x="200" y="137" fill="#94a3b8" font-size="9.5" text-anchor="middle">面板左側 ｜ Φ7mm 軸孔</text>
-  <rect x="154" y="215" width="92" height="28" rx="3" fill="#334155" stroke="#94a3b8" stroke-width="1.2"/>
-  <text x="200" y="233" fill="#cbd5e1" font-size="9" text-anchor="middle">WH148 B10K 本體</text>
-  <rect x="165.5" y="243" width="9" height="14" fill="#d4af37" stroke="#78350f" stroke-width="0.8"/>
-  <text x="170" y="271" fill="#f59e0b" font-size="9" font-weight="bold" text-anchor="middle">1</text>
-  <text x="170" y="281" fill="#f59e0b" font-size="7.5" text-anchor="middle">3.3V</text>
-  <rect x="195.5" y="243" width="9" height="14" fill="#d4af37" stroke="#78350f" stroke-width="0.8"/>
-  <text x="200" y="271" fill="#00e5ff" font-size="9" font-weight="bold" text-anchor="middle">2</text>
-  <text x="200" y="281" fill="#00e5ff" font-size="7.5" text-anchor="middle">Wiper</text>
-  <rect x="225.5" y="243" width="9" height="14" fill="#d4af37" stroke="#78350f" stroke-width="0.8"/>
-  <text x="230" y="271" fill="#94a3b8" font-size="9" font-weight="bold" text-anchor="middle">3</text>
-  <text x="230" y="281" fill="#94a3b8" font-size="7.5" text-anchor="middle">GND</text>
-  <text x="200" y="297" fill="#64748b" font-size="8" text-anchor="middle">由軸側看：左 → 右 = Pin 1 / 2 / 3</text>
-  <circle cx="470" cy="175" r="36" fill="#1e293b" stroke="#cbd5e1" stroke-width="2"/>
-  <circle cx="470" cy="175" r="27" fill="#0f172a" stroke="#64748b" stroke-width="1"/>
-  <line x1="470" y1="175" x2="470" y2="151" stroke="#f8fafc" stroke-width="3" stroke-linecap="round"/>
-  <text x="470" y="123" fill="#e2e8f0" font-size="12.5" font-weight="bold" text-anchor="middle">➡️ 右操舵旋鈕</text>
-  <text x="470" y="137" fill="#94a3b8" font-size="9.5" text-anchor="middle">面板右側 ｜ Φ7mm 軸孔</text>
-  <rect x="424" y="215" width="92" height="28" rx="3" fill="#334155" stroke="#94a3b8" stroke-width="1.2"/>
-  <text x="470" y="233" fill="#cbd5e1" font-size="9" text-anchor="middle">WH148 B10K 本體</text>
-  <rect x="435.5" y="243" width="9" height="14" fill="#d4af37" stroke="#78350f" stroke-width="0.8"/>
-  <text x="440" y="271" fill="#f59e0b" font-size="9" font-weight="bold" text-anchor="middle">1</text>
-  <text x="440" y="281" fill="#f59e0b" font-size="7.5" text-anchor="middle">3.3V</text>
-  <rect x="465.5" y="243" width="9" height="14" fill="#d4af37" stroke="#78350f" stroke-width="0.8"/>
-  <text x="470" y="271" fill="#00e5ff" font-size="9" font-weight="bold" text-anchor="middle">2</text>
-  <text x="470" y="281" fill="#00e5ff" font-size="7.5" text-anchor="middle">Wiper</text>
-  <rect x="495.5" y="243" width="9" height="14" fill="#d4af37" stroke="#78350f" stroke-width="0.8"/>
-  <text x="500" y="271" fill="#94a3b8" font-size="9" font-weight="bold" text-anchor="middle">3</text>
-  <text x="500" y="281" fill="#94a3b8" font-size="7.5" text-anchor="middle">GND</text>
-  <text x="470" y="297" fill="#64748b" font-size="8" text-anchor="middle">由軸側看：左 → 右 = Pin 1 / 2 / 3</text>
-  <path d="M 170 257 L 170 330 L 1000 330" fill="none" stroke="#f59e0b" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M 440 257 L 440 330" fill="none" stroke="#f59e0b" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="170" cy="330" r="5" fill="#f59e0b" stroke="#0b0f17" stroke-width="1.2"/>
-  <circle cx="440" cy="330" r="5" fill="#f59e0b" stroke="#0b0f17" stroke-width="1.2"/>
-  <text x="600" y="318" fill="#f59e0b" font-size="10.5" font-weight="bold" text-anchor="middle">① 3.3V 三向並聯節點 — 焊接＋熱縮套</text>
-  <path d="M 230 257 L 230 590 L 1000 590" fill="none" stroke="#94a3b8" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M 500 257 L 500 590" fill="none" stroke="#94a3b8" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="230" cy="590" r="5" fill="#94a3b8" stroke="#0b0f17" stroke-width="1.2"/>
-  <circle cx="500" cy="590" r="5" fill="#94a3b8" stroke="#0b0f17" stroke-width="1.2"/>
-  <text x="600" y="578" fill="#94a3b8" font-size="10.5" font-weight="bold" text-anchor="middle">② GND 三向並聯節點 — 焊接＋熱縮套</text>
-  <rect x="664" y="368" width="148" height="168" rx="8" fill="#1e293b" stroke="#e2e8f0" stroke-width="2"/>
-  <text x="738" y="394" fill="#f8fafc" font-size="13" font-weight="bold" text-anchor="middle">MTS-102</text>
-  <text x="738" y="410" fill="#cbd5e1" font-size="10" font-weight="bold" text-anchor="middle">舵輪切換開關</text>
-  <text x="738" y="425" fill="#fb7185" font-size="9" text-anchor="middle">Φ6.0mm 開孔｜短路型</text>
-  <line x1="738" y1="500" x2="716" y2="468" stroke="#f8fafc" stroke-width="6" stroke-linecap="round"/>
-  <circle cx="738" cy="500" r="6" fill="#94a3b8"/>
-  <rect x="650" y="395" width="14" height="10" fill="#d4af37" stroke="#78350f" stroke-width="0.8"/>
-  <text x="642" y="404" fill="#00e5ff" font-size="9.5" font-weight="bold" text-anchor="end">上接點</text>
-  <rect x="650" y="447" width="14" height="10" fill="#d4af37" stroke="#78350f" stroke-width="0.8"/>
-  <text x="642" y="456" fill="#34d399" font-size="9.5" font-weight="bold" text-anchor="end">COM</text>
-  <rect x="650" y="499" width="14" height="10" fill="#d4af37" stroke="#78350f" stroke-width="0.8"/>
-  <text x="642" y="508" fill="#00e5ff" font-size="9.5" font-weight="bold" text-anchor="end">下接點</text>
-  <path d="M 200 257 L 200 400 L 650 400" fill="none" stroke="#00e5ff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
-  <text x="300" y="391" fill="#00e5ff" font-size="10" font-weight="bold" text-anchor="middle">Wiper_L → 上接點</text>
-  <path d="M 470 257 L 470 504 L 650 504" fill="none" stroke="#00e5ff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
-  <text x="570" y="495" fill="#00e5ff" font-size="10" font-weight="bold" text-anchor="middle">Wiper_R → 下接點</text>
-  <path d="M 650 452 L 632 452 L 632 648 L 880 648 L 880 452 L 1000 452" fill="none" stroke="#34d399" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
-  <text x="756" y="630" fill="#34d399" font-size="10.5" font-weight="bold" text-anchor="middle">③ COM = 選通後的舵角訊號（只有這一條出線）</text>
-  <rect x="872" y="310" width="74" height="300" rx="8" fill="#1f2937" stroke="#6b7280" stroke-width="1.5" stroke-dasharray="5,3"/>
-  <text x="909" y="302" fill="#9ca3af" font-size="9" font-weight="bold" text-anchor="middle">8mm 蛇皮網</text>
-  <rect x="1000" y="304" width="120" height="312" rx="6" fill="#0c4a6e" stroke="#38bdf8" stroke-width="1.8"/>
-  <rect x="1008" y="317" width="104" height="26" rx="3" fill="#0f172a" stroke="#f59e0b" stroke-width="1.2"/>
-  <text x="1060" y="335" fill="#f59e0b" font-size="10" font-weight="bold" text-anchor="middle">Pin 1 · 3.3V</text>
-  <text x="1128" y="334" fill="#94a3b8" font-size="9" text-anchor="start">→ Row C 3.3V 軌</text>
-  <rect x="1008" y="439" width="104" height="26" rx="3" fill="#0f172a" stroke="#34d399" stroke-width="1.2"/>
-  <text x="1060" y="457" fill="#34d399" font-size="10" font-weight="bold" text-anchor="middle">Pin 2 · OUT</text>
-  <text x="1128" y="456" fill="#94a3b8" font-size="9" text-anchor="start">→ C0 濾波 → A0 (PA4)</text>
-  <rect x="1008" y="577" width="104" height="26" rx="3" fill="#0f172a" stroke="#94a3b8" stroke-width="1.2"/>
-  <text x="1060" y="595" fill="#94a3b8" font-size="10" font-weight="bold" text-anchor="middle">Pin 3 · GND</text>
-  <text x="1128" y="594" fill="#94a3b8" font-size="9" text-anchor="start">→ Row H 接地排</text>
-  <text x="1109" y="634" fill="#34d399" font-size="10.5" font-weight="bold" text-anchor="middle">XH2.54 3P 母頭 → CON 2A（Row B Col 12~14）</text>
-  <rect x="28" y="700" width="1224" height="1" fill="#1f2937"/>
-  <text x="40" y="722" fill="#94a3b8" font-size="11" text-anchor="start">● 圓點 = 實際相接；線條交叉但無圓點 = 不相連。兩個三向並聯節點請用焊接＋熱縮套，勿用絞線纏繞（面板會震）。</text>
-  <text x="40" y="742" fill="#94a3b8" font-size="11" text-anchor="start">● 左/右旋鈕本身並沒有任何訊號進到 MCU —— 韌體只讀 A0，完全不知道目前選的是哪一顆。</text>
-</svg>
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:16px;">
-      <div style="padding:14px 18px; border-left:4px solid #f43f5e; background:#1f1115; border-radius:6px;">
-        <b style="color:#fda4af;">⚠️ 選料必讀：切換開關要指名「短路型」</b>
-        <p style="color:#cbd5e1; font-size:12.5px; line-height:1.95; margin:8px 0 0;">
-          舵輪切換那顆 MTS-102 請指名 <b>make-before-break（短路型 / shorting type）</b>。
-          一般的 break-before-make 在撥動的短短幾毫秒內 COM 是懸空的，
-          A0 只剩板上 C0（100nF）擐著，電壓會漂；而韌體
-          <code>sketch.ino:239</code> 是直接把 <code>analogRead(A0)</code> 映射成 ±1000 送出去，
-          沒有任何限幅或變化率保護 —— <b>換手瞬間可能送出一個假舵令。</b>
-          改用短路型後，切換過程兩組 wiper 短暫並聯，只會讀到兩者的中間值，
-          絕不會浮接亂跳；兩顆 10k 電位器的 wiper 短接不會造成任何損害。
-        </p>
-      </div>
-      <div style="padding:14px 18px; border-left:4px solid #10b981; background:#0c1a14; border-radius:6px;">
-        <b style="color:#6ee7b7;">🔧 面板組裝步驟</b>
-        <ol style="color:#cbd5e1; font-size:12.5px; line-height:1.95; margin:8px 0 0 18px;">
-          <li>左/右 WH148 各就位鎖緊（Φ7mm 軸孔 ＋ 半徑 8mm 處 Φ2.8mm 防轉盲孔）。</li>
-          <li>MTS-102 裝入 Φ6.0mm 開孔，撥桿上 / 下 對應 左 / 右 舵輪。</li>
-          <li>做兩個三向並聯節點（3.3V、GND）—— 焊接後套熱縮。</li>
-          <li>Wiper_L → 上接點，Wiper_R → 下接點，COM → 出線。</li>
-          <li>3 條（3.3V / COM / GND）束進 8mm 蛇皮網，末端壓 XH2.54 3P 母頭。</li>
-          <li>走線避開雙推桿那兩條 5V 訊號線 —— wiper 源阻抗最高到 2.5kΩ，較容易被耦合。</li>
-        </ol>
-      </div>
-    </div>
-  </div>
 
   <!-- ══════════════════════════════════════════════════════════════════════ -->
   <!-- 第二頁：萬用洞洞板正面元件插裝與座標佈局圖 (Front View SVG) -->
@@ -7286,10 +7038,10 @@
               <td>非接觸霍爾感測 ｜ 滾珠軸承PTFE ｜ 5V供電 0~5V輸出</td>
             </tr>
             <tr>
-              <td><strong>雙操舵旋鈕</strong></td>
+              <td><strong>方向盤旋鈕</strong></td>
               <td><span class="model-tag">WH148 B10K ＋ Φ15mm 旋鈕帽</span></td>
               <td>開孔 7mm / 6mm 花軸</td>
-              <td>10kΩ 線性旋轉電位器 × 2 ＋ Φ15mm×H13mm 調音台防滑旋鈕帽，3.3V 供電，0~3.3V 輸出經開關選通入 A0</td>
+              <td>10kΩ 線性旋轉電位器 × 1 ＋ Φ15mm×H13mm 防滑旋鈕帽，3.3V 供電，0~3.3V Wiper 直入 A0</td>
             </tr>
             <tr>
               <td><strong>精密分壓組</strong></td>
@@ -7602,7 +7354,7 @@
               <span class="model-tag">MTS-123 (雙自復位) / MTS-102 (自鎖)</span>
             </div>
             <div class="part-spec">
-              <strong>⚡ 核心規格：</strong>6mm 螺紋開孔 ｜ 鍍鎳金屬撥桿 ｜ MTS-123 (雙自復位引擎啟閉 ×1) ｜ MTS-102 (模式切換 ×1 ＋ 雙舵輪切換 ×1，共 2 個)
+              <strong>⚡ 核心規格：</strong>6mm 螺紋開孔 ｜ 鍍鎳金屬撥桿 ｜ MTS-123 (雙自復位引擎啟閉 ×1) ｜ MTS-102 (模式切換 ×1)
             </div>
             <div class="part-usage">
               <strong>📌 專案用途：</strong>MTS-123 上下撥動分別觸發 A3 左引擎與 A4 右引擎點火；MTS-102 撥動切換 D21 航行/飛行模式
@@ -7621,7 +7373,7 @@
         <div class="part-card" id="part-potentiometer">
           <div class="part-img-wrap">
             <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAIBAQEBAQIBAQECAgICAgQDAgICAgUEBAMEBgUGBgYFBgYGBwkIBgcJBwYGCAsICQoKCgoKBggLDAsKDAkKCgr/2wBDAQICAgICAgUDAwUKBwYHCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgr/wAARCAEOAWgDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD9/KKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAoooo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KAPhLxZ/wbcf8EgPFOo3+rTfswz2Ul+7t5emeL9Sgit2bPMUYn2oATkLjaMAYxxX4Pf8FTv+CZ3xc/4JwfHzU/h5rXhXV7nwGJs+DfG8tg/2PUbRyWjSSZR5aXKZ8uRGKksu5QQwr+s4gMMEVm+K/BnhHx54fu/CXjjwxp+s6VfwmK+0vVbNLi3uIzwUeOQFWBHYg002hNI/icmViNwHB6EVWk3dORg9K/qO/aB/4Nu/+CUnx4v5tbsPgfeeBNQmZne4+H+tS6fEznv9ny0IA/uqij2r5T8df8Gc/wAJNRlmf4bft2+KdKVmzAmveCrTUQgzyGMU9sW4wAcg+uatTJ5Wfg2s1xASYZnQ99rEZ/Kla7uZzi5ndxn+Jya/bv8A4g0bwn5v+CkcXTH/ACRo/wDy5pP+IM67z/ykkjAyM4+DZ/8AlzV+0iHKfiHgY+UAc96kRQo3n5V9T0/Ov3z+GX/Bnn+zromsR3nxc/bK8beIrNMb7HQ9AtdJMnsZC87gfQg+9fV37Pn/AAbvf8En/wBnnUIdcsf2b08X6lbyb4b74g6pNq+0/wDXGU+SR9YzjtSdRdgUT+dX9h//AIJ5ftV/t/8Ajm38Dfs8fCfUdU06e4W21bxXPbtHo+lRscNLPckbDsGW8tC0jYwF5r9wf2bP+DTr/gnR8JUs9U+M/iDxr8SdRhVDcxanrH9n2ErgDdiC0CuFJzwZScHHvX6a+HPCnhjwfo8Hh3wl4esdK0+1TZbWGm2iQQRL6KiAKo+grQrJybZXKjlvhD8EvhL8APAln8Mfgl8OdG8K+H9PTbaaRoWnpbQJwAW2oBuY4GWOWJ5JNdQBilopDCiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAP/Z" alt="WH148 B10K 單聯旋轉電位器 ＋ Φ15mm×H13mm 調音台防滑旋鈕帽" class="part-img" loading="lazy">
-            <span class="part-badge" style="border-color:#14b8a6; color:#14b8a6;">方向舵旋鈕 (×2組)</span>
+            <span class="part-badge" style="border-color:#14b8a6; color:#14b8a6;">方向舵旋鈕 (×1)</span>
           </div>
           <div class="part-body">
             <div class="part-header">
@@ -7632,7 +7384,7 @@
               <strong>⚡ 核心規格：</strong>WH148 B10K 線性 (7mm螺紋/6mm花軸) ＋ 148型工程塑料旋鈕帽（外徑Φ15mm×H13mm、直槽防滑、白線指示、免頂絲緊配合插拔）
             </div>
             <div class="part-usage">
-              <strong>📌 專案用途：</strong>左右各配置 1 組，搭配 15mm 調音台防滑旋鈕帽；兩者 3.3V/GND 並聯，Wiper 經左側切換開關選通後直連 A0 類比腳
+              <strong>📌 專案用途：</strong>面板左側配置 1 組，搭配 15mm 防滑旋鈕帽；Pin1/Pin3 接 3.3V/GND，Pin2 Wiper 直連 A0 類比腳（韌體映射 ±1000，LCD 顯示 ±40度）
             </div>
             <div class="part-sources">
               <div class="source-title">🛒 推薦購買通路與搜尋關鍵字：</div>
@@ -8311,7 +8063,7 @@
           <div class="sop-step-badge" style="background:linear-gradient(135deg, #a855f7, #7e22ce);">SOP-09A 核心機械圖紙</div>
           <div class="sop-title-wrap">
             <h3>外殼頂部操作面板開孔加工工程圖與人因工學孔位尺寸放樣 (280mm × 180mm 面板)</h3>
-            <span class="sop-subtitle">中間上方 3.2" LCD 開窗 ｜ 中間下方雙推桿槽 ｜ 左右對稱雙舵輪 ｜ 左上角急停 ｜ 左側垂直平均開關排</span>
+            <span class="sop-subtitle">中間上方 3.2" LCD 開窗 ｜ 中間下方雙推桿槽 ｜ 左側方向盤旋鈕 ｜ 左上角急停 ｜ 左側垂直平均開關排</span>
           </div>
         </div>
         <div class="sop-body">
@@ -8345,34 +8097,29 @@
                   <text x="46" y="30" fill="#cbd5e1" font-size="7.5">(LA16-11ZS 蘑菇頭)</text>
                 </g>
 
-                <!-- LEFT VERTICAL SWITCH RACK (4 holes evenly spaced, pitch 26mm -> 42px) -->
+                <!-- LEFT VERTICAL SWITCH RACK (3 holes evenly spaced, pitch 26mm -> 42px) -->
                 <g transform="translate(30, 85)">
-                  <!-- Switch 1: Steering Select -->
-                  <circle cx="22" cy="25" r="9" fill="#1e293b" stroke="#a855f7" stroke-width="1.5"/>
+                  <!-- Switch 1: Mode Select -->
+                  <circle cx="22" cy="25" r="9" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5"/>
                   <circle cx="22" cy="25" r="1.5" fill="#fff"/>
-                  <text x="36" y="28" fill="#c084fc" font-size="8" font-weight="bold">Φ6.0mm (舵輪切換)</text>
+                  <text x="36" y="28" fill="#38bdf8" font-size="8" font-weight="bold">Φ6.0mm (模式切換)</text>
 
-                  <!-- Switch 2: Mode Select -->
-                  <circle cx="22" cy="67" r="9" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5"/>
+                  <!-- Switch 2: Engine Start/Stop -->
+                  <circle cx="22" cy="67" r="9" fill="#1e293b" stroke="#10b981" stroke-width="1.5"/>
                   <circle cx="22" cy="67" r="1.5" fill="#fff"/>
-                  <text x="36" y="70" fill="#38bdf8" font-size="8" font-weight="bold">Φ6.0mm (模式切換)</text>
+                  <text x="36" y="70" fill="#34d399" font-size="8" font-weight="bold">Φ6.0mm (雙引擎啟閉)</text>
 
-                  <!-- Switch 3: Engine Start/Stop -->
-                  <circle cx="22" cy="109" r="9" fill="#1e293b" stroke="#10b981" stroke-width="1.5"/>
-                  <circle cx="22" cy="109" r="1.5" fill="#fff"/>
-                  <text x="36" y="112" fill="#34d399" font-size="8" font-weight="bold">Φ6.0mm (雙引擎啟閉)</text>
-
-                  <!-- Switch 4: Control Takeover Key -->
-                  <circle cx="22" cy="155" r="16" fill="#1e293b" stroke="#cbd5e1" stroke-width="1.5"/>
-                  <circle cx="22" cy="155" r="2" fill="#fff"/>
-                  <text x="42" y="159" fill="#f8fafc" font-size="8" font-weight="bold">Φ16.0mm (控制權鍵)</text>
+                  <!-- Switch 3: Control Takeover Key -->
+                  <circle cx="22" cy="113" r="16" fill="#1e293b" stroke="#cbd5e1" stroke-width="1.5"/>
+                  <circle cx="22" cy="113" r="2" fill="#fff"/>
+                  <text x="42" y="117" fill="#f8fafc" font-size="8" font-weight="bold">Φ16.0mm (控制權鍵)</text>
 
                   <!-- Dimension line for even spacing -->
-                  <line x1="8" y1="25" x2="8" y2="155" stroke="#94a3b8" stroke-dasharray="2,2"/>
-                  <text x="-4" y="95" fill="#f59e0b" font-size="7.5" transform="rotate(-90, -4, 95)">均勻間距：26.0 mm</text>
+                  <line x1="8" y1="25" x2="8" y2="113" stroke="#94a3b8" stroke-dasharray="2,2"/>
+                  <text x="-4" y="74" fill="#f59e0b" font-size="7.5" transform="rotate(-90, -4, 74)">均勻間距：26.0 mm</text>
                 </g>
 
-                <!-- LEFT STEERING WHEEL MOUNTING -->
+                <!-- STEERING KNOB MOUNTING (left side) -->
         <g transform="translate(180, 80)">
           <!-- Knob Outer Envelope: Φ15mm (r=21px in 2.8px/mm scale) -->
           <circle cx="55" cy="80" r="22" fill="#0b0f17" stroke="#38bdf8" stroke-dasharray="3,3"/>
@@ -8380,7 +8127,7 @@
           <circle cx="55" cy="80" r="1.5" fill="#fff"/>
           <!-- Anti-rotation hole (R=7.5mm at 7 o'clock) -->
           <circle cx="44" cy="91" r="4.5" fill="#d97706" stroke="#f59e0b" stroke-width="1.2"/>
-          <text x="55" y="125" fill="#38bdf8" font-size="9" font-weight="bold" text-anchor="middle">左操舵旋鈕軸孔 (Φ15mm 旋鈕)</text>
+          <text x="55" y="125" fill="#38bdf8" font-size="9" font-weight="bold" text-anchor="middle">方向盤旋鈕軸孔 (Φ15mm 旋鈕)</text>
           <text x="55" y="138" fill="#94a3b8" font-size="7.5" text-anchor="middle">主軸孔：Φ7.0 mm ｜ 防轉銷孔：Φ2.8 mm</text>
         </g>
 
@@ -8411,24 +8158,12 @@
                   <text x="100" y="138" fill="#f59e0b" font-size="7.5" text-anchor="middle">4×M3 沉頭孔 (孔距 82×15mm)</text>
                 </g>
 
-                <!-- RIGHT STEERING WHEEL MOUNTING -->
-        <g transform="translate(510, 80)">
-          <!-- Knob Outer Envelope: Φ15mm (r=21px in 2.8px/mm scale) -->
-          <circle cx="55" cy="80" r="22" fill="#0b0f17" stroke="#38bdf8" stroke-dasharray="3,3"/>
-          <circle cx="55" cy="80" r="10" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5"/>
-          <circle cx="55" cy="80" r="1.5" fill="#fff"/>
-          <!-- Anti-rotation hole (R=7.5mm at 5 o'clock) -->
-          <circle cx="66" cy="91" r="4.5" fill="#d97706" stroke="#f59e0b" stroke-width="1.2"/>
-          <text x="55" y="125" fill="#38bdf8" font-size="9" font-weight="bold" text-anchor="middle">右操舵旋鈕軸孔 (Φ15mm 旋鈕)</text>
-          <text x="55" y="138" fill="#94a3b8" font-size="7.5" text-anchor="middle">主軸孔：Φ7.0 mm ｜ 防轉銷孔：Φ2.8 mm</text>
-        </g>
-
                 <!-- RIGHT WING NOTES -->
                 <g transform="translate(645, 60)">
                   <rect width="115" height="200" rx="6" fill="#080c14" stroke="#1e293b"/>
                   <text x="57" y="24" fill="#93c5fd" font-size="9" font-weight="bold" text-anchor="middle">人因工學設計規範</text>
-                  <text x="10" y="50" fill="#cbd5e1" font-size="7.5">1. 雙操舵音響旋鈕左右對稱佈局</text>
-                  <text x="10" y="66" fill="#cbd5e1" font-size="7.5">   音響級實心滾花旋鈕手感</text>
+                  <text x="10" y="50" fill="#cbd5e1" font-size="7.5">1. 左側方向盤旋鈕左手操舵</text>
+                  <text x="10" y="66" fill="#cbd5e1" font-size="7.5">   Φ15mm 防滑旋鈕單手撥舵</text>
                   <text x="10" y="86" fill="#cbd5e1" font-size="7.5">2. 中央上方 3.2" 儀表</text>
                   <text x="10" y="102" fill="#cbd5e1" font-size="7.5">   駕駛平視視角最優化</text>
                   <text x="10" y="122" fill="#cbd5e1" font-size="7.5">3. 中央下方雙油門推桿</text>
@@ -8443,17 +8178,12 @@
             <div class="action-box">
               <span class="action-num">圖面尺寸放樣</span>
               <h4>CNC銑槽與雷射開孔規範</h4>
-              <p>選取 <strong>280mm × 180mm × 3.0mm</strong> 陽極氧化黑色鋁合金板或碳纖維板。依照圖紙中心線精確放樣：中央上方銑出 78×55mm LCD 開窗；中央下方銑出 70×50mm 雙推桿槽；左上角開 16mm 急停孔；左側垂直以 <strong>26mm 均勻間距</strong> 鑽出 3 顆 6.0mm 搖頭開關孔與 1 顆 16mm 控制權孔。</p>
+              <p>選取 <strong>280mm × 180mm × 3.0mm</strong> 陽極氧化黑色鋁合金板或碳纖維板。依照圖紙中心線精確放樣：中央上方銑出 78×55mm LCD 開窗；中央下方銑出 70×50mm 雙推桿槽；左上角開 16mm 急停孔；左側垂直以 <strong>26mm 均勻間距</strong> 鑽出 2 顆 6.0mm 搖頭開關孔與 1 顆 16mm 控制權孔。</p>
             </div>
             <div class="action-box">
-              <span class="action-num">雙操舵旋鈕防轉銷</span>
+              <span class="action-num">方向盤旋鈕防轉銷</span>
               <h4>WH148 電位計防轉銷與 Φ15mm 調音台旋鈕帽安裝</h4>
-              <p>在左右兩側對稱中心鑽出 <strong>7.0mm 旋鈕軸孔</strong>。並在軸心半徑 8.0mm 處，以 2.8mm 鑽頭鑽出 depth 1.5mm 盲孔（或通孔）。WH148 電位計金屬定位凸耳必須完全落入該防轉孔內，套入齒形墊圈鎖緊螺母；最後由上方將 Φ15mm×H13mm 調音台直槽工程塑料旋鈕帽垂直緊壓入 6mm 花軸，體積適中、單手快速撥舵絕不打滑空轉！</p>
-            </div>
-            <div class="action-box">
-              <span class="action-num">雙操舵旋鈕切換工法</span>
-              <h4>零延遲硬體選通電氣接線</h4>
-              <p>左旋鈕與右旋鈕之 1 腳(3.3V)與 3 腳(GND)在面板內部直接並聯供電。左舵輪 2 腳(Wiper_L)引至「舵輪切換開關」上接點，右舵輪 2 腳(Wiper_R)引至下接點；開關中央公共腳(COM)直接送入洞洞板 A0 針腳。<strong>純硬體切換，零運算延遲。<b style="color:#fda4af;">☠ 切換開關必須指名 make-before-break（短路型）</b>；若用一般的 break-before-make，撥動瞬間 COM 懸空會使 A0 浮接，韌體會把漂掉的值當成舵令送出。詳見第一頁 (C) 面板內側線束圖。</strong></p>
+              <p>在面板左側方向盤中心鑽出 <strong>7.0mm 旋鈕軸孔</strong>。並在軸心半徑 8.0mm 處，以 2.8mm 鑽頭鑽出 depth 1.5mm 盲孔（或通孔）。WH148 電位計金屬定位凸耳必須完全落入該防轉孔內，套入齒形墊圈鎖緊螺母；最後由上方將 Φ15mm×H13mm 調音台直槽工程塑料旋鈕帽垂直緊壓入 6mm 花軸，體積適中、單手快速撥舵絕不打滑空轉！</p>
             </div>
           </div>
         </div>
@@ -8571,7 +8301,7 @@
         <div class="sop-header">
           <div class="sop-step-badge">SOP-10 & 11</div>
           <div class="sop-title-wrap">
-            <h3>WH148 操舵旋鈕電位器防轉定位 ＆ LA16-11ZS 急停按鈕 Fail-Safe 常閉接線</h3>
+            <h3>WH148 方向盤電位器防轉定位 ＆ LA16-11ZS 急停按鈕 Fail-Safe 常閉接線</h3>
             <span class="sop-subtitle">7mm 圓孔+防轉定位銷 ｜ 16mm 蘑菇頭自鎖 ｜ 斷線即觸發硬體最高安全防護</span>
           </div>
         </div>
@@ -8659,7 +8389,7 @@
             <div class="action-box">
               <span class="action-num">工法 10.1</span>
               <h4>電位器防轉銷孔加工</h4>
-              <p>在面板操舵旋鈕位置鑽 <strong>7.0mm</strong> 軸心主孔，並在距離中心 <strong>7.5mm</strong> 處鑽一顆 <strong>2.8mm</strong> 防轉定位淺孔。電位器由下方穿入時將側邊金屬凸耳卡入定位孔，套上齒形墊片旋緊螺母；最後將 <strong>Φ15mm×H13mm 調音台工程塑料旋鈕帽</strong> 垂直壓入 6mm 花軸，緊配合定位防滑！</p>
+              <p>在面板方向盤旋鈕位置鑽 <strong>7.0mm</strong> 軸心主孔，並在距離中心 <strong>7.5mm</strong> 處鑽一顆 <strong>2.8mm</strong> 防轉定位淺孔。電位器由下方穿入時將側邊金屬凸耳卡入定位孔，套上齒形墊片旋緊螺母；最後將 <strong>Φ15mm×H13mm 調音台工程塑料旋鈕帽</strong> 垂直壓入 6mm 花軸，緊配合定位防滑！</p>
             </div>
             <div class="action-box">
               <span class="action-num">工法 11.1</span>
