@@ -42,6 +42,11 @@ AiCal cal_rthr  = { 225, 0, 1023, false };   // 22% × 1023 ≈ 225
 uint8_t g_di_invert    = 0;      // 各 DI 反向旗標（位元順序同上）
 bool    g_calib_loaded = false;  // MPU 已下發校正值；on_inputs 回報給 MPU 判斷是否需重送
 
+// Arduino 前處理器會把所有自動產生的函式原型插在「第一個函式定義」（即下方 ai_map）之前，
+// 其中 db_raw(const DebouncedInput*) 等原型會早於 struct DebouncedInput 的定義出現，
+// 故先前置宣告，否則編譯報 'DebouncedInput' does not name a type
+struct DebouncedInput;
+
 // 分段線性映射：raw ∈ [min, ctr] → [out_min, out_mid]，raw ∈ [ctr, max] → [out_mid, out_max]
 static int32_t ai_map(int raw, const AiCal* c, int32_t out_min, int32_t out_max) {
     int lo = c->min, hi = c->max;
